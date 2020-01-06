@@ -1,0 +1,212 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Architecture &#8212; LiberTEM 0.4.0.dev0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Performance" href="performance.html" />
+    <link rel="prev" title="Off-axis electron holography" href="app/holography.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="architecture">
+<span id="id1"></span><h1>Architecture<a class="headerlink" href="#architecture" title="Permalink to this headline">¶</a></h1>
+<img alt="_images/architecture.svg" src="_images/architecture.svg" /><p>LiberTEM currently focuses on pixelated STEM and scanning electron beam diffraction data processing, both
+interactive and offline. The processing back-end supports any n-dimensional binary data. As concrete supported operations, we started with
+everything that can be expressed as the application of one or more masks and
+summation, i.e. virtual detector, center of mass etc. These operations are
+embarrassingly parallel and can be scaled to a distributed system very well. Furthermore, we support <a class="reference internal" href="udf.html#user-defined-functions"><span class="std std-ref">User-defined functions</span></a> that process well-defined subsets of a dataset following a simplified <a class="reference external" href="https://en.wikipedia.org/wiki/MapReduce">MapReduce programming model</a>.</p>
+<p>For our task, data locality is one of the most important factors for achieving
+good performance and scalability. With a traditional distributed storage
+solution (like Lustre or NFS), the network will quickly become the bottleneck.</p>
+<p>LiberTEM is distributing the data to the local storage of
+each compute node. One possible implementation is using the <a class="reference external" href="https://hadoop.apache.org/docs/r3.1.0/">Hadoop filesystem (HDFS)</a>,
+although we are <a class="reference external" href="https://github.com/LiberTEM/LiberTEM/issues/136">working on a transparent caching layer</a> as an alternative. The general idea is to split the dataset into (usually disjoint) partitions,
+which are assigned to worker nodes.</p>
+<p>The execution is structured into Tasks and Jobs. A Job represents the computation on
+a whole dataset, and is divided into Tasks for each partition. The scheduler executes
+Tasks on the available worker nodes. For fast execution on each node, the Task reads the
+data in small Tiles (~1MB).</p>
+<p>For distributing the workload, we are using <a class="reference external" href="https://distributed.readthedocs.io/">dask.distributed</a>. The <cite>Future</cite> API
+allows us to control our computation in a flexible way, with little overhead.
+With dask Futures, we can assure that computation on a partition of the dataset
+is scheduled on the node(s) that hold the partition on their local storage.</p>
+<p>For ingesting data into the cluster, a <a class="reference external" href="https://github.com/LiberTEM/LiberTEM/issues/136">caching layer</a>
+(WIP) will transparently read a dataset from a primary source (via a shared network file system,
+HTTP, …) and stores it on fast local storage in a format that is best suited for efficient processing.
+The cached data can also be pre-processed, for example for offset correction or applying a gain map.</p>
+<p>An important part of the architecture is the API server. Through the API server,
+the client gets access to the resources of the cluster, by running jobs. It uses
+a protocol based on HTTP and/or websockets. Processing is initiated by HTTP calls,
+and results are streamed back to the browser via web sockets.</p>
+<p>The API server keeps some state in memory, like information about the currently
+opened datasets. Traditionally this would be done with an external
+in-memory database, but for ease of deployment, we decided to integrate this into the
+API server.</p>
+<p>Processing is done in an asynchronous fashion; if you start a job using the
+HTTP API, the request immediately returns, but you get notifications about
+status changes and results on the websocket channel, or you can explicitly
+query the API server about a specific job. API calls in the Python API are synchronous
+for keeping it easy to use. Please <a class="reference external" href="https://gitter.im/LiberTEM/Lobby">contact us</a> or
+<a class="reference external" href="https://github.com/LiberTEM/LiberTEM/issues/216">add a comment to Issue #216</a> if you are interested in
+an asynchronous Python API for LiberTEM!</p>
+<p>As UI, we use a web-based interface. This allows LiberTEM to work
+in cloud environment as well as locally on a single node. We can benefit from
+existing FOSS frameworks and infrastructure for communication, authentication
+etc. of the web.</p>
+<p>LiberTEM is also suited for running on your laptop or workstation. In this case,
+all parts can run on a single node. We can also skip the caching step, if the data
+is already available locally.</p>
+<p>When taking care to avoid needless copying and buffering, we can achieve native
+throughput on each node. With NVMe SSDs, this means we can <a class="reference external" href="performance">process multiple gigabytes per
+second per node</a>.</p>
+<div class="section" id="mathematical-expression-for-applying-masks">
+<h2>Mathematical expression for applying masks<a class="headerlink" href="#mathematical-expression-for-applying-masks" title="Permalink to this headline">¶</a></h2>
+<p>The most basic operation with pixelated STEM data is multiplying each frame
+element-wise with a mask of the same size and summing up the result for each
+frame. This way one can implement virtual detectors, center of mass and
+darkfield imaging, to name a few examples.</p>
+<p>Since each frame is processed individually and there’s a 1:1 match between
+mask element and detector pixel, the processing can be simplified by
+flattening the 4D dataset to a 2D matrix, i.e. a list of vectors where each
+vector is one flattened detector frame.
+Correspondingly, each mask is flattened to a 1D vector as well.
+The result of element-wise  multiplication and summation is a 1D vector for
+each mask, where each entry corresponds to the result of one frame.
+To display the result, the data can be re-shaped to the scan dimension again.</p>
+<p>With those extra dimensions flattened, let <code class="docutils literal notranslate"><span class="pre">c</span></code> be the number of pixels per frame,
+<code class="docutils literal notranslate"><span class="pre">n</span></code> the number of frames and <code class="docutils literal notranslate"><span class="pre">m</span></code> the number of masks. Let (<code class="docutils literal notranslate"><span class="pre">A</span></code>) be
+a <code class="docutils literal notranslate"><span class="pre">n</span> <span class="pre">x</span> <span class="pre">c</span></code> matrix with the scanned data, and <code class="docutils literal notranslate"><span class="pre">B</span></code> a <code class="docutils literal notranslate"><span class="pre">c</span> <span class="pre">x</span> <span class="pre">m</span></code> matrix with the masks.
+Applying the masks in <code class="docutils literal notranslate"><span class="pre">B</span></code> to the detector data in <code class="docutils literal notranslate"><span class="pre">A</span></code> can be expressed as a
+<a class="reference external" href="https://en.wikipedia.org/wiki/Matrix_multiplication#Definition">rectangular matrix product</a>
+of <code class="docutils literal notranslate"><span class="pre">A</span></code> and <code class="docutils literal notranslate"><span class="pre">B</span></code>.</p>
+<p>That means we can use the BLAS function
+<a class="reference external" href="https://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms#Level_3">GEMM</a>.
+to process the flattened data and we can choose from  wide array of highly optimized
+implementations of this operation. LiberTEM supports both dense and sparse masks (<a class="reference external" href="https://sparse.pydata.org">sparse.pydata.org</a> and <a class="reference external" href="https://docs.scipy.org/doc/scipy/reference/sparse.html">scipy.sparse</a>) for this purpose. This functionality is available through <a class="reference internal" href="reference/api.html#libertem.api.Context.create_mask_job" title="libertem.api.Context.create_mask_job"><code class="xref py py-meth docutils literal notranslate"><span class="pre">create_mask_job()</span></code></a>, <a class="reference internal" href="reference/api.html#libertem.api.Context.create_mask_analysis" title="libertem.api.Context.create_mask_analysis"><code class="xref py py-meth docutils literal notranslate"><span class="pre">create_mask_analysis()</span></code></a> and a number of more specialized analysis functions in <a class="reference internal" href="reference/api.html#libertem.api.Context" title="libertem.api.Context"><code class="xref py py-class docutils literal notranslate"><span class="pre">Context</span></code></a>.</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="index.html">
+    <img class="logo" src="_static/logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">GUI usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="concepts.html">Concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="formats.html">Loading data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="udf.html">User-defined functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="applications.html">Applications</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Architecture</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#mathematical-expression-for-applying-masks">Mathematical expression for applying masks</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="performance.html">Performance</a></li>
+<li class="toctree-l1"><a class="reference internal" href="debugging.html">Debugging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/index.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tips.html">Tips and tricks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_python.html">Why Python?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gsoc.html">GSoC 2019 ideas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="authorship.html">Authorship policy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="citing.html">Citing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="acknowledgments.html">Acknowledgments</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="app/holography.html" title="previous chapter">Off-axis electron holography</a></li>
+      <li>Next: <a href="performance.html" title="next chapter">Performance</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, LiberTEM Authors.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/architecture.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

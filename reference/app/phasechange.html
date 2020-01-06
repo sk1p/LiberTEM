@@ -1,0 +1,292 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Phase-change materials reference &#8212; LiberTEM 0.4.0.dev0 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    <link rel="shortcut icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Off-axis electron holography" href="holography.html" />
+    <link rel="prev" title="Correlation-based peak finding and strain mapping reference" href="strain.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="phase-change-materials-reference">
+<span id="phasechange"></span><h1>Phase-change materials reference<a class="headerlink" href="#phase-change-materials-reference" title="Permalink to this headline">¶</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>See <a class="reference internal" href="../../app/phasechange.html#phasechange-app"><span class="std std-ref">Phase-change materials</span></a> for an overview and description of these UDFs.</p>
+</div>
+<div class="section" id="module-libertem.udf.crystallinity">
+<span id="crystallinity-map"></span><h2>Crystallinity map<a class="headerlink" href="#module-libertem.udf.crystallinity" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="libertem.udf.crystallinity.CrystallinityUDF">
+<em class="property">class </em><code class="sig-prename descclassname">libertem.udf.crystallinity.</code><code class="sig-name descname">CrystallinityUDF</code><span class="sig-paren">(</span><em class="sig-param">rad_in</em>, <em class="sig-param">rad_out</em>, <em class="sig-param">real_center</em>, <em class="sig-param">real_rad</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/libertem/udf/crystallinity.html#CrystallinityUDF"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.udf.crystallinity.CrystallinityUDF" title="Permalink to this definition">¶</a></dt>
+<dd><p>Determine crystallinity by integration over a ring in the fourier spectrum of each frame.</p>
+<dl class="method">
+<dt id="libertem.udf.crystallinity.CrystallinityUDF.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">rad_in</em>, <em class="sig-param">rad_out</em>, <em class="sig-param">real_center</em>, <em class="sig-param">real_rad</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/libertem/udf/crystallinity.html#CrystallinityUDF.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.udf.crystallinity.CrystallinityUDF.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">cryst_udf</span> <span class="o">=</span> <span class="n">CrystallinityUDF</span><span class="p">(</span><span class="n">rad_in</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">rad_out</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">real_center</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">),</span> <span class="n">real_rad</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">run_udf</span><span class="p">(</span><span class="n">dataset</span><span class="o">=</span><span class="n">dataset</span><span class="p">,</span> <span class="n">udf</span><span class="o">=</span><span class="n">cryst_udf</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">&quot;intensity&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">(16, 16)</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rad_in</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Inner radius in pixels of a ring mask for the integration in Fourier space</p></li>
+<li><p><strong>rad_out</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Outer radius in pixels of a ring mask for the integration in Fourier space</p></li>
+<li><p><strong>real_center</strong> (<em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a><em>]</em><em>, </em><em>optional</em>) – (y,x) - pixels, coordinates of a center of a circle for a masking out zero-order peak
+in real space.</p></li>
+<li><p><strong>real_rad</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a><em>, </em><em>optional</em>) – Radius in pixels of circle for a masking out zero-order peak in real space.
+If one of real_center or real_rad is missing: the integration will be done without
+masking zero-order peak out.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="libertem.udf.crystallinity.run_analysis_crystall">
+<code class="sig-prename descclassname">libertem.udf.crystallinity.</code><code class="sig-name descname">run_analysis_crystall</code><span class="sig-paren">(</span><em class="sig-param">ctx</em>, <em class="sig-param">dataset</em>, <em class="sig-param">rad_in</em>, <em class="sig-param">rad_out</em>, <em class="sig-param">real_center=None</em>, <em class="sig-param">real_rad=None</em>, <em class="sig-param">roi=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/libertem/udf/crystallinity.html#run_analysis_crystall"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.udf.crystallinity.run_analysis_crystall" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a value after integration of Fourier spectrum for each frame over ring.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ctx</strong> (<a class="reference internal" href="../api.html#libertem.api.Context" title="libertem.api.Context"><em>Context</em></a>) – Context class that contains methods for loading datasets,
+creating jobs on them and running them</p></li>
+<li><p><strong>dataset</strong> (<a class="reference internal" href="../dataset.html#libertem.io.dataset.base.DataSet" title="libertem.io.dataset.base.DataSet"><em>DataSet</em></a>) – A dataset with 1- or 2-D scan dimensions and 2-D frame dimensions</p></li>
+<li><p><strong>rad_in</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Inner radius in pixels of a ring mask for the integration in Fourier space</p></li>
+<li><p><strong>rad_out</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Outer radius in pixels of a ring mask for the integration in Fourier space</p></li>
+<li><p><strong>real_center</strong> (<em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a><em>]</em><em>, </em><em>optional</em>) – (y,x) - pixels, coordinates of a center of a circle for a masking out zero-order peak
+in real space.</p></li>
+<li><p><strong>real_rad</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a><em>, </em><em>optional</em>) – Radius in pixels of circle for a masking out zero-order peak in real space.
+If one of real_center or real_rad is missing: the integration will be done without
+masking zero-order peak out.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>pass_results</strong> – Returns a “crystallinity” value for each frame.
+To return 2-D array use pass_results[‘intensity’].data</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#dict" title="(in Python v3.7)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-libertem.udf.feature_vector_maker">
+<span id="clustering"></span><h2>Clustering<a class="headerlink" href="#module-libertem.udf.feature_vector_maker" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="libertem.udf.feature_vector_maker.FeatureVecMakerUDF">
+<em class="property">class </em><code class="sig-prename descclassname">libertem.udf.feature_vector_maker.</code><code class="sig-name descname">FeatureVecMakerUDF</code><span class="sig-paren">(</span><em class="sig-param">coordinates</em>, <em class="sig-param">delta</em>, <em class="sig-param">savg</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/libertem/udf/feature_vector_maker.html#FeatureVecMakerUDF"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.udf.feature_vector_maker.FeatureVecMakerUDF" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a feature vector for each frame in ROI based on non-zero order diffraction peaks
+positions</p>
+<dl class="method">
+<dt id="libertem.udf.feature_vector_maker.FeatureVecMakerUDF.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">coordinates</em>, <em class="sig-param">delta</em>, <em class="sig-param">savg</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/libertem/udf/feature_vector_maker.html#FeatureVecMakerUDF.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.udf.feature_vector_maker.FeatureVecMakerUDF.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>coordinates</strong> (<em>np.array</em>) – Array of frame coordinates (i.e. shape (N, 2) for N coords) which should be
+checked for peak intensity</p></li>
+<li><p><strong>savg</strong> (<em>np.array</em>) – Reference image, usually the mean of all frames (or mean of all frames in a ROI)</p></li>
+<li><p><strong>delta</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Relative intensity difference between current frame and reference
+image for decision making for feature vector value
+(delta = (x-ref) / ref, so, normally, value should be in range [0,1])</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">savg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">)</span>  <span class="c1"># in real usage should be mean of all frames</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">udf</span> <span class="o">=</span> <span class="n">FeatureVecMakerUDF</span><span class="p">(</span><span class="n">delta</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">coordinates</span><span class="o">=</span><span class="n">coords</span><span class="p">,</span> <span class="n">savg</span><span class="o">=</span><span class="n">savg</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">run_udf</span><span class="p">(</span><span class="n">dataset</span><span class="o">=</span><span class="n">dataset</span><span class="p">,</span> <span class="n">udf</span><span class="o">=</span><span class="n">udf</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">&quot;feature_vec&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">(16, 16, 3)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="libertem.udf.feature_vector_maker.make_feature_vec">
+<code class="sig-prename descclassname">libertem.udf.feature_vector_maker.</code><code class="sig-name descname">make_feature_vec</code><span class="sig-paren">(</span><em class="sig-param">ctx</em>, <em class="sig-param">dataset</em>, <em class="sig-param">delta</em>, <em class="sig-param">n_peaks</em>, <em class="sig-param">min_dist=None</em>, <em class="sig-param">center=None</em>, <em class="sig-param">rad_in=None</em>, <em class="sig-param">rad_out=None</em>, <em class="sig-param">roi=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/libertem/udf/feature_vector_maker.html#make_feature_vec"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.udf.feature_vector_maker.make_feature_vec" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a feature vector for each frame in ROI based on non-zero order diffraction peaks
+positions</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ctx</strong> (<a class="reference internal" href="../api.html#libertem.api.Context" title="libertem.api.Context"><em>Context</em></a>) – Context class that contains methods for loading datasets,
+creating jobs on them and running them</p></li>
+<li><p><strong>dataset</strong> (<a class="reference internal" href="../dataset.html#libertem.io.dataset.base.DataSet" title="libertem.io.dataset.base.DataSet"><em>DataSet</em></a>) – A dataset with 1- or 2-D scan dimensions and 2-D frame dimensions</p></li>
+<li><p><strong>num</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Number of possible peak positions to detect (better put higher value,
+the output is limited to the number of peaks the algorithm could find)</p></li>
+<li><p><strong>delta</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Relative intensity difference between current frame and reference image for decision making
+for feature vector value (delta = (x-ref)/ref, so, normally, value should be in range [0,1])</p></li>
+<li><p><strong>rad_in</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a><em>, </em><em>optional</em>) – Inner radius in pixels of a ring to mask region of interest of SD image to delete outliers
+for peak finding</p></li>
+<li><p><strong>rad_out</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a><em>, </em><em>optional</em>) – Outer radius in pixels of a ring to mask region of interest of SD image to delete outliers
+for peak finding</p></li>
+<li><p><strong>center</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#tuple" title="(in Python v3.7)"><em>tuple</em></a><em>, </em><em>optional</em>) – (y,x) - pixels, coordinates of a ring to mask region of interest of SD image
+to delete outliers for peak finding</p></li>
+<li><p><strong>roi</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a><em>, </em><em>optional</em>) – boolean array which limits the elements the UDF is working on.
+Has a shape of dataset_shape.nav</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>pass_results</strong> (<em>dict</em>) – Returns a feature vector for each frame.
+“1” - denotes presence of peak for current frame for given possible peak position,
+“0” - absence of peak for current frame for given possible peak position,
+To return 2-D array use pass_results[‘feature_vec’].data</p></li>
+<li><p><strong>coordinates</strong> (<em>numpy array of int</em>) – Returns array of coordinates of possible peaks positions</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../../index.html">
+    <img class="logo" src="../../_static/logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">GUI usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../concepts.html">Concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../formats.html">Loading data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../udf.html">User-defined functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../applications.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../performance.html">Performance</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../debugging.html">Debugging</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../api.html">LiberTEM Context API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../udf.html">UDF API reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dataset.html">Data Set API</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../application.html">Application-specific API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../masks.html">Mask creation and manipulation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../internals.html">Internal API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dask.html">Dask API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../cluster-ds.html">Cluster data set</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../caching.html">Distributed caching layer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#indices-and-tables">Indices and tables</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tips.html">Tips and tricks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../why_python.html">Why Python?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../gsoc.html">GSoC 2019 ideas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../authorship.html">Authorship policy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../citing.html">Citing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../acknowledgments.html">Acknowledgments</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Reference</a><ul>
+  <li><a href="../application.html">Application-specific API</a><ul>
+      <li>Previous: <a href="strain.html" title="previous chapter">Correlation-based peak finding and strain mapping reference</a></li>
+      <li>Next: <a href="holography.html" title="next chapter">Off-axis electron holography</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, LiberTEM Authors.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../../_sources/reference/app/phasechange.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

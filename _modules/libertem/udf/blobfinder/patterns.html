@@ -1,0 +1,417 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>libertem.udf.blobfinder.patterns &#8212; LiberTEM 0.4.0.dev0 documentation</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    <link rel="shortcut icon" href="../../../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for libertem.udf.blobfinder.patterns</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">import</span> <span class="nn">libertem.masks</span> <span class="k">as</span> <span class="nn">masks</span>
+
+
+<span class="c1"># FIXME There&#39;s work on flexible FFT backends in scipy</span>
+<span class="c1"># https://github.com/scipy/scipy/wiki/GSoC-2019-project-ideas#revamp-scipyfftpack</span>
+<span class="c1"># and discussions about pyfftw performance vs other implementations</span>
+<span class="c1"># https://github.com/pyFFTW/pyFFTW/issues/264</span>
+<span class="c1"># For that reason we shoud review the state of Python FFT implementations</span>
+<span class="c1"># regularly and adapt our choices accordingly</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">pyfftw</span>
+    <span class="n">fft</span> <span class="o">=</span> <span class="n">pyfftw</span><span class="o">.</span><span class="n">interfaces</span><span class="o">.</span><span class="n">numpy_fft</span>
+    <span class="n">pyfftw</span><span class="o">.</span><span class="n">interfaces</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">enable</span><span class="p">()</span>
+    <span class="n">zeros</span> <span class="o">=</span> <span class="n">pyfftw</span><span class="o">.</span><span class="n">zeros_aligned</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">fft</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span>
+    <span class="n">zeros</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span>
+
+
+<div class="viewcode-block" id="MatchPattern"><a class="viewcode-back" href="../../../../reference/app/strain.html#libertem.udf.blobfinder.patterns.MatchPattern">[docs]</a><span class="k">class</span> <span class="nc">MatchPattern</span><span class="p">:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Abstract base class for correlation patterns.</span>
+
+<span class="sd">    This class provides an API to provide a template for fast correlation-based peak finding.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+<div class="viewcode-block" id="MatchPattern.__init__"><a class="viewcode-back" href="../../../../reference/app/strain.html#libertem.udf.blobfinder.patterns.MatchPattern.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">search</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        search : float</span>
+<span class="sd">            Range from the center point in px to include in the correlation, defining the size</span>
+<span class="sd">            of the square correlation pattern.</span>
+<span class="sd">            Will be ceiled to the next int for performing the correlation.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">search</span> <span class="o">=</span> <span class="n">search</span></div>
+
+    <span class="k">def</span> <span class="nf">get_crop_size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">search</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">get_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sig_shape</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+
+    <span class="k">def</span> <span class="nf">get_template</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sig_shape</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">fft</span><span class="o">.</span><span class="n">rfft2</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_mask</span><span class="p">(</span><span class="n">sig_shape</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="Circular"><a class="viewcode-back" href="../../../../reference/app/strain.html#libertem.udf.blobfinder.patterns.Circular">[docs]</a><span class="k">class</span> <span class="nc">Circular</span><span class="p">(</span><span class="n">MatchPattern</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Circular pattern with radius :code:`radius`.</span>
+
+<span class="sd">    This pattern is useful for constructing feature vectors using</span>
+<span class="sd">    :meth:`~libertem.udf.blobfinder.feature_vector`.</span>
+
+<span class="sd">    .. versionadded:: 0.3.0</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+<div class="viewcode-block" id="Circular.__init__"><a class="viewcode-back" href="../../../../reference/app/strain.html#libertem.udf.blobfinder.patterns.Circular.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span> <span class="n">search</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        radius : float</span>
+<span class="sd">            Radius of the circular pattern in px</span>
+<span class="sd">        search : float, optional</span>
+<span class="sd">            Range from the center point in px to include in the correlation, 2x radius by default.</span>
+<span class="sd">            Defining the size of the square correlation pattern.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">search</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">search</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">radius</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">radius</span> <span class="o">=</span> <span class="n">radius</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">search</span><span class="o">=</span><span class="n">search</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">get_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sig_shape</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">masks</span><span class="o">.</span><span class="n">circular</span><span class="p">(</span>
+            <span class="n">centerY</span><span class="o">=</span><span class="n">sig_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span>
+            <span class="n">centerX</span><span class="o">=</span><span class="n">sig_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span>
+            <span class="n">imageSizeY</span><span class="o">=</span><span class="n">sig_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">imageSizeX</span><span class="o">=</span><span class="n">sig_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">radius</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">radius</span><span class="p">,</span>
+            <span class="n">antialiased</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="RadialGradient"><a class="viewcode-back" href="../../../../reference/app/strain.html#libertem.udf.blobfinder.patterns.RadialGradient">[docs]</a><span class="k">class</span> <span class="nc">RadialGradient</span><span class="p">(</span><span class="n">MatchPattern</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Radial gradient from zero in the center to one at :code:`radius`.</span>
+
+<span class="sd">    This pattern rejects the influence of internal intensity variations of the CBED disk.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+<div class="viewcode-block" id="RadialGradient.__init__"><a class="viewcode-back" href="../../../../reference/app/strain.html#libertem.udf.blobfinder.patterns.RadialGradient.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span> <span class="n">search</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        radius : float</span>
+<span class="sd">            Radius of the circular pattern in px</span>
+<span class="sd">        search : float, optional</span>
+<span class="sd">            Range from the center point in px to include in the correlation, 2x radius by default.</span>
+<span class="sd">            Defining the size of the square correlation pattern.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">search</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">search</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">radius</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">radius</span> <span class="o">=</span> <span class="n">radius</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">search</span><span class="o">=</span><span class="n">search</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">get_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sig_shape</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">masks</span><span class="o">.</span><span class="n">radial_gradient</span><span class="p">(</span>
+            <span class="n">centerY</span><span class="o">=</span><span class="n">sig_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span>
+            <span class="n">centerX</span><span class="o">=</span><span class="n">sig_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span>
+            <span class="n">imageSizeY</span><span class="o">=</span><span class="n">sig_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">imageSizeX</span><span class="o">=</span><span class="n">sig_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">radius</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">radius</span><span class="p">,</span>
+            <span class="n">antialiased</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="BackgroundSubtraction"><a class="viewcode-back" href="../../../../reference/app/strain.html#libertem.udf.blobfinder.patterns.BackgroundSubtraction">[docs]</a><span class="k">class</span> <span class="nc">BackgroundSubtraction</span><span class="p">(</span><span class="n">MatchPattern</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Solid circular disk surrounded with a balancing negative area</span>
+
+<span class="sd">    This pattern rejects background and avoids false positives at positions between peaks</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+<div class="viewcode-block" id="BackgroundSubtraction.__init__"><a class="viewcode-back" href="../../../../reference/app/strain.html#libertem.udf.blobfinder.patterns.BackgroundSubtraction.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span> <span class="n">search</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">radius_outer</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        radius : float</span>
+<span class="sd">            Radius of the circular pattern in px</span>
+<span class="sd">        search : float, optional</span>
+<span class="sd">            Range from the center point in px to include in the correlation.</span>
+<span class="sd">            :code:`max(2*radius, radius_outer)` by default.</span>
+<span class="sd">            Defining the size of the square correlation pattern.</span>
+<span class="sd">        radius_outer : float, optional</span>
+<span class="sd">            Radius of the negative region in px. 1.5x radius by default.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">radius_outer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">radius_outer</span> <span class="o">=</span> <span class="n">radius</span> <span class="o">*</span> <span class="mf">1.5</span>
+        <span class="k">if</span> <span class="n">search</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">search</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">radius</span><span class="p">,</span> <span class="n">radius_outer</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">radius</span> <span class="o">=</span> <span class="n">radius</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">radius_outer</span> <span class="o">=</span> <span class="n">radius_outer</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">search</span><span class="o">=</span><span class="n">search</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">get_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sig_shape</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">masks</span><span class="o">.</span><span class="n">background_subtraction</span><span class="p">(</span>
+            <span class="n">centerY</span><span class="o">=</span><span class="n">sig_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span>
+            <span class="n">centerX</span><span class="o">=</span><span class="n">sig_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span>
+            <span class="n">imageSizeY</span><span class="o">=</span><span class="n">sig_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">imageSizeX</span><span class="o">=</span><span class="n">sig_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">radius</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">radius_outer</span><span class="p">,</span>
+            <span class="n">radius_inner</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">radius</span><span class="p">,</span>
+            <span class="n">antialiased</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="UserTemplate"><a class="viewcode-back" href="../../../../reference/app/strain.html#libertem.udf.blobfinder.patterns.UserTemplate">[docs]</a><span class="k">class</span> <span class="nc">UserTemplate</span><span class="p">(</span><span class="n">MatchPattern</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    User-defined template</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+<div class="viewcode-block" id="UserTemplate.__init__"><a class="viewcode-back" href="../../../../reference/app/strain.html#libertem.udf.blobfinder.patterns.UserTemplate.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">template</span><span class="p">,</span> <span class="n">search</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        template : numpy.ndarray</span>
+<span class="sd">            Correlation template as 2D numpy.ndarray</span>
+<span class="sd">        search : float, optional</span>
+<span class="sd">            Range from the center point in px to include in the correlation.</span>
+<span class="sd">            Half diagonal of the template by default.</span>
+<span class="sd">            Defining the size of the square correlation pattern.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">search</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Half diagonal</span>
+            <span class="n">search</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">template</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">template</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">template</span> <span class="o">=</span> <span class="n">template</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">search</span><span class="o">=</span><span class="n">search</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">get_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sig_shape</span><span class="p">):</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">sig_shape</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">template</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">dy</span><span class="p">,</span> <span class="n">dx</span> <span class="o">=</span> <span class="n">sig_shape</span>
+        <span class="n">ty</span><span class="p">,</span> <span class="n">tx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">template</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="n">left</span> <span class="o">=</span> <span class="n">dx</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">tx</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="n">top</span> <span class="o">=</span> <span class="n">dy</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">ty</span> <span class="o">/</span> <span class="mi">2</span>
+
+        <span class="n">r_left</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">left</span><span class="p">)</span>
+        <span class="n">r_top</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">top</span><span class="p">)</span>
+
+        <span class="n">t_left</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="n">left</span><span class="p">)</span>
+        <span class="n">t_top</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="n">top</span><span class="p">)</span>
+
+        <span class="n">crop_x</span> <span class="o">=</span> <span class="n">r_left</span> <span class="o">-</span> <span class="n">left</span>
+        <span class="n">crop_y</span> <span class="o">=</span> <span class="n">r_top</span> <span class="o">-</span> <span class="n">top</span>
+
+        <span class="n">h</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ty</span> <span class="o">-</span> <span class="mi">2</span><span class="o">*</span><span class="n">crop_y</span><span class="p">)</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">tx</span> <span class="o">-</span> <span class="mi">2</span><span class="o">*</span><span class="n">crop_x</span><span class="p">)</span>
+
+        <span class="n">r_left</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">r_left</span><span class="p">)</span>
+        <span class="n">r_top</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">r_top</span><span class="p">)</span>
+        <span class="n">t_left</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">t_left</span><span class="p">)</span>
+        <span class="n">t_top</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">t_top</span><span class="p">)</span>
+
+        <span class="n">result</span><span class="p">[</span><span class="n">r_top</span><span class="p">:</span><span class="n">r_top</span> <span class="o">+</span> <span class="n">h</span><span class="p">,</span> <span class="n">r_left</span><span class="p">:</span><span class="n">r_left</span> <span class="o">+</span> <span class="n">w</span><span class="p">]</span> <span class="o">=</span> \
+            <span class="bp">self</span><span class="o">.</span><span class="n">template</span><span class="p">[</span><span class="n">t_top</span><span class="p">:</span><span class="n">t_top</span> <span class="o">+</span> <span class="n">h</span><span class="p">,</span> <span class="n">t_left</span><span class="p">:</span><span class="n">t_left</span> <span class="o">+</span> <span class="n">w</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="RadialGradientBackgroundSubtraction"><a class="viewcode-back" href="../../../../reference/app/strain.html#libertem.udf.blobfinder.patterns.RadialGradientBackgroundSubtraction">[docs]</a><span class="k">class</span> <span class="nc">RadialGradientBackgroundSubtraction</span><span class="p">(</span><span class="n">UserTemplate</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Combination of radial gradient with background subtraction</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+<div class="viewcode-block" id="RadialGradientBackgroundSubtraction.__init__"><a class="viewcode-back" href="../../../../reference/app/strain.html#libertem.udf.blobfinder.patterns.RadialGradientBackgroundSubtraction.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span> <span class="n">search</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">radius_outer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">radial_map</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        See :meth:`~libertem.masks.radial_gradient_background_subtraction` for details.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        radius : float</span>
+<span class="sd">            Radius of the circular pattern in px</span>
+<span class="sd">        search : float, optional</span>
+<span class="sd">            Range from the center point in px to include in the correlation.</span>
+<span class="sd">            :code:`max(2*radius, radius_outer)` by default</span>
+<span class="sd">            Defining the size of the square correlation pattern.</span>
+<span class="sd">        radius_outer : float, optional</span>
+<span class="sd">            Radius of the negative region in px. 1.5x radius by default.</span>
+<span class="sd">        delta : float, optional</span>
+<span class="sd">            Width of the transition region between positive and negative in px</span>
+<span class="sd">        radial_map : numpy.ndarray, optional</span>
+<span class="sd">            Radius value of each pixel in px. This can be used to distort the shape as needed</span>
+<span class="sd">            or work in physical coordinates instead of pixels.</span>
+<span class="sd">            A suitable map can be generated with :meth:`libertem.masks.polar_map`.</span>
+
+<span class="sd">        Example</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        &gt;&gt;&gt; import matplotlib.pyplot as plt</span>
+
+<span class="sd">        &gt;&gt;&gt; (radius, phi) = libertem.masks.polar_map(</span>
+<span class="sd">        ...     centerX=64, centerY=64,</span>
+<span class="sd">        ...     imageSizeX=128, imageSizeY=128,</span>
+<span class="sd">        ...     stretchY=2., angle=np.pi/4</span>
+<span class="sd">        ... )</span>
+
+<span class="sd">        &gt;&gt;&gt; template = RadialGradientBackgroundSubtraction(</span>
+<span class="sd">        ...     radius=30, radial_map=radius)</span>
+
+<span class="sd">        &gt;&gt;&gt; # This shows an elliptical template that is stretched</span>
+<span class="sd">        &gt;&gt;&gt; # along the 45 ° bottom-left top-right diagonal</span>
+<span class="sd">        &gt;&gt;&gt; plt.imshow(template.get_mask(sig_shape=(128, 128)))</span>
+<span class="sd">        &lt;matplotlib.image.AxesImage object at ...&gt;</span>
+<span class="sd">        &gt;&gt;&gt; plt.show() # doctest: +SKIP</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">radius_outer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">radius_outer</span> <span class="o">=</span> <span class="n">radius</span> <span class="o">*</span> <span class="mf">1.5</span>
+        <span class="k">if</span> <span class="n">search</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">search</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">radius</span><span class="p">,</span> <span class="n">radius_outer</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">radial_map</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">radius</span><span class="p">,</span> <span class="n">radius_outer</span><span class="p">)</span>
+            <span class="n">radial_map</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">masks</span><span class="o">.</span><span class="n">polar_map</span><span class="p">(</span>
+                <span class="n">centerX</span><span class="o">=</span><span class="n">r</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                <span class="n">centerY</span><span class="o">=</span><span class="n">r</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                <span class="n">imageSizeX</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">r</span> <span class="o">+</span> <span class="mi">2</span><span class="p">)),</span>
+                <span class="n">imageSizeY</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">r</span> <span class="o">+</span> <span class="mi">2</span><span class="p">)),</span>
+            <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">radius</span> <span class="o">=</span> <span class="n">radius</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">radius_outer</span> <span class="o">=</span> <span class="n">radius_outer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">delta</span> <span class="o">=</span> <span class="n">delta</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">radial_map</span> <span class="o">=</span> <span class="n">radial_map</span>
+        <span class="n">template</span> <span class="o">=</span> <span class="n">masks</span><span class="o">.</span><span class="n">radial_gradient_background_subtraction</span><span class="p">(</span>
+            <span class="n">r</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">radial_map</span><span class="p">,</span>
+            <span class="n">r0</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">radius</span><span class="p">,</span>
+            <span class="n">r_outer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">radius_outer</span><span class="p">,</span>
+            <span class="n">delta</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">delta</span>
+        <span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">template</span><span class="o">=</span><span class="n">template</span><span class="p">,</span> <span class="n">search</span><span class="o">=</span><span class="n">search</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">get_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sig_shape</span><span class="p">):</span>
+        <span class="c1"># Recalculate in case someone has changed parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">template</span> <span class="o">=</span> <span class="n">masks</span><span class="o">.</span><span class="n">radial_gradient_background_subtraction</span><span class="p">(</span>
+            <span class="n">r</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">radial_map</span><span class="p">,</span>
+            <span class="n">r0</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">radius</span><span class="p">,</span>
+            <span class="n">r_outer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">radius_outer</span><span class="p">,</span>
+            <span class="n">delta</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">delta</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_mask</span><span class="p">(</span><span class="n">sig_shape</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../../../../index.html">
+    <img class="logo" src="../../../../_static/logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../usage.html">GUI usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../concepts.html">Concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../formats.html">Loading data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../udf.html">User-defined functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../applications.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../performance.html">Performance</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../debugging.html">Debugging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../reference/index.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../tips.html">Tips and tricks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../why_python.html">Why Python?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../gsoc.html">GSoC 2019 ideas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../authorship.html">Authorship policy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../citing.html">Citing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../acknowledgments.html">Acknowledgments</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, LiberTEM Authors.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

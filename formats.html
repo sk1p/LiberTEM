@@ -1,0 +1,202 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Loading data &#8212; LiberTEM 0.4.0.dev0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="User-defined functions" href="udf.html" />
+    <link rel="prev" title="Python API" href="api.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="loading-data">
+<span id="id1"></span><h1>Loading data<a class="headerlink" href="#loading-data" title="Permalink to this headline">¶</a></h1>
+<p>To efficiently handle files larger than main memory, LiberTEM never loads the whole
+data set into memory. Calling the <a class="reference internal" href="reference/api.html#libertem.api.Context.load" title="libertem.api.Context.load"><code class="xref py py-meth docutils literal notranslate"><span class="pre">load()</span></code></a> function only opens the data set and gives
+back a handle; running a job with <a class="reference internal" href="reference/api.html#libertem.api.Context.run" title="libertem.api.Context.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">run()</span></code></a> or <a class="reference internal" href="reference/api.html#libertem.api.Context.run_udf" title="libertem.api.Context.run_udf"><code class="xref py py-meth docutils literal notranslate"><span class="pre">run_udf()</span></code></a> then streams the data from mass storage.</p>
+<p>There are two main ways of opening a data set in LiberTEM: using the GUI, or
+the Python API.</p>
+<div class="section" id="loading-through-the-api">
+<h2>Loading through the API<a class="headerlink" href="#loading-through-the-api" title="Permalink to this headline">¶</a></h2>
+<p>In the API, you can use <a class="reference internal" href="reference/api.html#libertem.api.Context.load" title="libertem.api.Context.load"><code class="xref py py-meth docutils literal notranslate"><span class="pre">libertem.api.Context.load()</span></code></a>. The general
+pattern is:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;&gt;</span> <span class="n">ctx</span> <span class="o">=</span> <span class="n">Context</span><span class="p">()</span>
+<span class="o">&gt;&gt;</span> <span class="n">ctx</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;typename&quot;</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="s2">&quot;/path/to/some/file&quot;</span><span class="p">,</span> <span class="n">arg1</span><span class="o">=</span><span class="s2">&quot;val1&quot;</span><span class="p">,</span> <span class="n">arg2</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>So, you need to specify the data set type, the path, and dataset-specific arguments. These
+arguments are documented below.</p>
+<p>For the full list of supported file formats and type names, see <a class="reference internal" href="reference/dataset.html#formats"><span class="std std-ref">format-specific API reference</span></a>.</p>
+</div>
+<div class="section" id="loading-using-the-gui">
+<span id="id2"></span><h2>Loading using the GUI<a class="headerlink" href="#loading-using-the-gui" title="Permalink to this headline">¶</a></h2>
+<p>Using the GUI, mostly the same parameters need to be specified, although some are only available
+in the Python API. Tuples (for example for <cite>scan_size</cite> or <cite>tileshape</cite>) have to be entered as
+comma-separated values. We follow the NumPy convention here and specify the “fast-access”
+dimension last, so a value of <cite>“42, 21”</cite> would mean the same as specifying <code class="code docutils literal notranslate"><span class="pre">(42,</span> <span class="pre">21)</span></code> in the
+Python API, setting <cite>y=42</cite> and <cite>x=21</cite>. Note that the GUI currently only support 4D data sets,
+while the scripting API should handle more general n-dimensional data.</p>
+<p>See also <a class="reference internal" href="concepts.html#concepts"><span class="std std-ref">the concepts section</span></a>.</p>
+</div>
+<div class="section" id="common-parameters">
+<h2>Common parameters<a class="headerlink" href="#common-parameters" title="Permalink to this headline">¶</a></h2>
+<p>There are some common parameters across data set types:</p>
+<dl class="simple">
+<dt><cite>name</cite></dt><dd><p>The name of the data set, for display purposes. Only used in the GUI.</p>
+</dd>
+<dt><cite>tileshape</cite></dt><dd><p>Some data set types support setting a tile shape, which is
+a tuning parameter. It can mostly be ignored and left to the default value,
+but sometimes you’ll need to set it manually (for example for raw data
+sets). The tile shape is the smallest unit of data we are reading and
+working on.</p>
+</dd>
+<dt><cite>scan_size</cite></dt><dd><p>In the GUI, we generally support visualizing data containing rectangular 2D scans. For
+some data set types, you can specify a scan_size as a tuple <cite>(y, x)</cite>; for
+others it is even required. When using the Python API, you are free to use n-dimensional
+<cite>scan_size</cite>, if the chosen analysis supports it.</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="supported-formats">
+<h2>Supported formats<a class="headerlink" href="#supported-formats" title="Permalink to this headline">¶</a></h2>
+<p>LiberTEM supports the following file formats out of the box, see links for details:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="reference/dataset.html#mib"><span class="std std-ref">Merlin Medipix (MIB)</span></a></p></li>
+<li><p><a class="reference internal" href="reference/dataset.html#raw-binary"><span class="std std-ref">Raw binary files</span></a></p></li>
+<li><p><a class="reference internal" href="reference/dataset.html#dm-format"><span class="std std-ref">Digital Micrograph (DM3, DM4) files</span></a></p></li>
+<li><p><a class="reference internal" href="reference/dataset.html#empad"><span class="std std-ref">EMPAD</span></a></p></li>
+<li><p><a class="reference internal" href="reference/dataset.html#k2is"><span class="std std-ref">K2IS</span></a></p></li>
+<li><p><a class="reference internal" href="reference/dataset.html#frms6"><span class="std std-ref">FRMS6</span></a></p></li>
+<li><p><a class="reference internal" href="reference/dataset.html#blo"><span class="std std-ref">BLO</span></a></p></li>
+<li><p><a class="reference internal" href="reference/dataset.html#ser"><span class="std std-ref">SER</span></a></p></li>
+<li><p><a class="reference internal" href="reference/dataset.html#hdf5"><span class="std std-ref">HDF5</span></a></p></li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="index.html">
+    <img class="logo" src="_static/logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">GUI usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="concepts.html">Concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">Python API</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Loading data</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#loading-through-the-api">Loading through the API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#loading-using-the-gui">Loading using the GUI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#common-parameters">Common parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#supported-formats">Supported formats</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="udf.html">User-defined functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="applications.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="performance.html">Performance</a></li>
+<li class="toctree-l1"><a class="reference internal" href="debugging.html">Debugging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/index.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tips.html">Tips and tricks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_python.html">Why Python?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gsoc.html">GSoC 2019 ideas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="authorship.html">Authorship policy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="citing.html">Citing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="acknowledgments.html">Acknowledgments</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="api.html" title="previous chapter">Python API</a></li>
+      <li>Next: <a href="udf.html" title="next chapter">User-defined functions</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, LiberTEM Authors.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/formats.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,307 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Changelog &#8212; LiberTEM 0.4.0.dev0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Tips and tricks" href="tips.html" />
+    <link rel="prev" title="Distributed caching layer" href="reference/caching.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="changelog">
+<h1>Changelog<a class="headerlink" href="#changelog" title="Permalink to this headline">¶</a></h1>
+<span class="target" id="continuous"></span><div class="section" id="v0-3-0">
+<span id="latest"></span><span id="id1"></span><h2>0.3.0<a class="headerlink" href="#v0-3-0" title="Permalink to this headline">¶</a></h2>
+<a class="reference external image-reference" href="https://doi.org/10.5281/zenodo.3572855"><img alt="https://zenodo.org/badge/DOI/10.5281/zenodo.3572855.svg" src="https://zenodo.org/badge/DOI/10.5281/zenodo.3572855.svg" /></a>
+<div class="section" id="new-features">
+<h3>New features<a class="headerlink" href="#new-features" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><p>Make OOP based composition and subclassing easier for
+<a class="reference internal" href="reference/app/strain.html#libertem.udf.blobfinder.correlation.CorrelationUDF" title="libertem.udf.blobfinder.correlation.CorrelationUDF"><code class="xref py py-class docutils literal notranslate"><span class="pre">CorrelationUDF</span></code></a> (<a class="reference external" href="https://github.com/LiberTEM/LiberTEM/pull/466">#466</a>)</p></li>
+<li><p>Introduce plain circular match pattern <a class="reference internal" href="reference/app/strain.html#libertem.udf.blobfinder.patterns.Circular" title="libertem.udf.blobfinder.patterns.Circular"><code class="xref py py-class docutils literal notranslate"><span class="pre">Circular</span></code></a> (<a class="reference external" href="https://github.com/LiberTEM/LiberTEM/pull/469">#469</a>)</p></li>
+<li><p>Distributed sharded dataset <a class="reference internal" href="reference/cluster-ds.html#libertem.io.dataset.cluster.ClusterDataSet" title="libertem.io.dataset.cluster.ClusterDataSet"><code class="xref py py-class docutils literal notranslate"><span class="pre">ClusterDataSet</span></code></a> (<a class="reference external" href="https://github.com/LiberTEM/LiberTEM/issues/136">#136</a>, <a class="reference external" href="https://github.com/LiberTEM/LiberTEM/issues/457">#457</a>)</p></li>
+<li><p>Support for caching data sets <a class="reference internal" href="reference/caching.html#libertem.io.dataset.cached.CachedDataSet" title="libertem.io.dataset.cached.CachedDataSet"><code class="xref py py-class docutils literal notranslate"><span class="pre">CachedDataSet</span></code></a>
+from slower storage (NFS, spinning metal) on fast local storage (<a class="reference external" href="https://github.com/LiberTEM/LiberTEM/pull/471">#471</a>)</p></li>
+<li><p><a class="reference internal" href="app/phasechange.html#clustering"><span class="std std-ref">Clustering</span></a> analysis (<a class="reference external" href="https://github.com/LiberTEM/LiberTEM/pull/401">#401</a>, <a class="reference external" href="https://github.com/LiberTEM/LiberTEM/pull/408">#408</a> by <a class="reference external" href="https://github.com/kruzaeva">&#64;kruzaeva</a>).</p></li>
+<li><dl class="simple">
+<dt><a class="reference internal" href="reference/dataset.html#libertem.io.dataset.dm.DMDataSet" title="libertem.io.dataset.dm.DMDataSet"><code class="xref py py-class docutils literal notranslate"><span class="pre">libertem.io.dataset.dm.DMDataSet</span></code></a> implementation based on ncempy (<a class="reference external" href="https://github.com/LiberTEM/LiberTEM/pull/497">#497</a>)</dt><dd><ul>
+<li><p>Adds a new <code class="xref py py-meth docutils literal notranslate"><span class="pre">map()</span></code> executor primitive. Used to concurrently
+read the metadata for DM3/DM4 files on initialization.</p></li>
+<li><p>Note: no support for the web GUI yet, as the naming patterns for DM file series varies wildly. Needs
+changes in the file dialog.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p>Speed up of up to 150x for correlation-based peak refinement in
+<a class="reference internal" href="reference/app/strain.html#module-libertem.udf.blobfinder.correlation" title="libertem.udf.blobfinder.correlation"><code class="xref py py-mod docutils literal notranslate"><span class="pre">libertem.udf.blobfinder.correlation</span></code></a> with a Numba-based pipeline (<a class="reference external" href="https://github.com/LiberTEM/LiberTEM/pull/468">#468</a>)</p></li>
+<li><p>Introduce <a class="reference internal" href="reference/app/strain.html#libertem.udf.blobfinder.correlation.FullFrameCorrelationUDF" title="libertem.udf.blobfinder.correlation.FullFrameCorrelationUDF"><code class="xref py py-class docutils literal notranslate"><span class="pre">FullFrameCorrelationUDF</span></code></a> which
+correlates a large number (several hundred) of small peaks (10x10) on small
+frames (256x256) faster than
+<a class="reference internal" href="reference/app/strain.html#libertem.udf.blobfinder.correlation.FastCorrelationUDF" title="libertem.udf.blobfinder.correlation.FastCorrelationUDF"><code class="xref py py-class docutils literal notranslate"><span class="pre">FastCorrelationUDF</span></code></a> and
+<a class="reference internal" href="reference/app/strain.html#libertem.udf.blobfinder.correlation.SparseCorrelationUDF" title="libertem.udf.blobfinder.correlation.SparseCorrelationUDF"><code class="xref py py-class docutils literal notranslate"><span class="pre">SparseCorrelationUDF</span></code></a> (<a class="reference external" href="https://github.com/LiberTEM/LiberTEM/pull/468">#468</a>)</p></li>
+<li><p>Introduce <a class="reference internal" href="reference/udf.html#libertem.udf.UDFPreprocessMixin" title="libertem.udf.UDFPreprocessMixin"><code class="xref py py-class docutils literal notranslate"><span class="pre">UDFPreprocessMixin</span></code></a> (<a class="reference external" href="https://github.com/LiberTEM/LiberTEM/pull/464">#464</a>)</p></li>
+<li><p>Implement iterator over <a class="reference internal" href="reference/api.html#libertem.analysis.base.AnalysisResultSet" title="libertem.analysis.base.AnalysisResultSet"><code class="xref py py-class docutils literal notranslate"><span class="pre">AnalysisResultSet</span></code></a> (<a class="reference external" href="https://github.com/LiberTEM/LiberTEM/pull/496">#496</a>)</p></li>
+<li><p>Add hologram simulation
+<a class="reference internal" href="reference/app/holography.html#libertem.utils.generate.hologram_frame" title="libertem.utils.generate.hologram_frame"><code class="xref py py-func docutils literal notranslate"><span class="pre">libertem.utils.generate.hologram_frame()</span></code></a> (<a class="reference external" href="https://github.com/LiberTEM/LiberTEM/pull/475">#475</a>)</p></li>
+<li><p>Implement Hologram reconstruction UDF
+<a class="reference internal" href="reference/app/holography.html#libertem.udf.holography.HoloReconstructUDF" title="libertem.udf.holography.HoloReconstructUDF"><code class="xref py py-class docutils literal notranslate"><span class="pre">libertem.udf.holography.HoloReconstructUDF</span></code></a> (<a class="reference external" href="https://github.com/LiberTEM/LiberTEM/pull/475">#475</a>)</p></li>
+</ul>
+</div>
+<div class="section" id="bug-fixes">
+<h3>Bug fixes<a class="headerlink" href="#bug-fixes" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><p>Improved error and validation handling when opening files with GUI (<a class="reference external" href="https://github.com/LiberTEM/LiberTEM/issues/433">#433</a>, <a class="reference external" href="https://github.com/LiberTEM/LiberTEM/issues/442">#442</a>)</p></li>
+<li><p>Clean-up and improvements of <a class="reference internal" href="reference/app/strain.html#libertem.analysis.fullmatch.FullMatcher" title="libertem.analysis.fullmatch.FullMatcher"><code class="xref py py-class docutils literal notranslate"><span class="pre">libertem.analysis.fullmatch.FullMatcher</span></code></a> (<a class="reference external" href="https://github.com/LiberTEM/LiberTEM/pull/463">#463</a>)</p></li>
+<li><p>Ensure that RAW dataset sizes are calculated as int64 to avoid integer overflows (<a class="reference external" href="https://github.com/LiberTEM/LiberTEM/pull/495">#495</a>, <a class="reference external" href="https://github.com/LiberTEM/LiberTEM/issues/493">#493</a>)</p></li>
+<li><p>Resolve shape mismatch issue and simplify dominant order calculation in Radial Fourier Analysis (<a class="reference external" href="https://github.com/LiberTEM/LiberTEM/pull/502">#502</a>)</p></li>
+<li><p>Actually pass the <code class="code docutils literal notranslate"><span class="pre">enable_direct</span></code> parameter from web API to the DataSet</p></li>
+</ul>
+</div>
+<div class="section" id="documentation">
+<h3>Documentation<a class="headerlink" href="#documentation" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><p>Created <a class="reference internal" href="authorship.html#authorship"><span class="std std-ref">Authorship policy</span></a> (<a class="reference external" href="https://github.com/LiberTEM/LiberTEM/pull/460">#460</a>, <a class="reference external" href="https://github.com/LiberTEM/LiberTEM/pull/483">#483</a>)</p></li>
+<li><p>Change management process (<a class="reference external" href="https://github.com/LiberTEM/LiberTEM/issues/443">#443</a>, <a class="reference external" href="https://github.com/LiberTEM/LiberTEM/pull/451">#451</a>, <a class="reference external" href="https://github.com/LiberTEM/LiberTEM/pull/453">#453</a>)</p></li>
+<li><p>Documentation for <a class="reference internal" href="app/phasechange.html#crystallinity-map"><span class="std std-ref">Crystallinity map</span></a> and <a class="reference internal" href="app/phasechange.html#clustering"><span class="std std-ref">Clustering</span></a> analysis (<a class="reference external" href="https://github.com/LiberTEM/LiberTEM/pull/408">#408</a> by <a class="reference external" href="https://github.com/kruzaeva">&#64;kruzaeva</a>)</p></li>
+<li><p>Instructions for profiling slow tests (<a class="reference external" href="https://github.com/LiberTEM/LiberTEM/issues/447">#447</a>, <a class="reference external" href="https://github.com/LiberTEM/LiberTEM/pull/448">#448</a>)</p></li>
+<li><p>Improve API reference on Analysis results (<a class="reference external" href="https://github.com/LiberTEM/LiberTEM/issues/494">#494</a>, <a class="reference external" href="https://github.com/LiberTEM/LiberTEM/pull/496">#496</a>)</p></li>
+<li><p>Restructure and update the API reference for a number of UDFs and
+other application-specific code (<a class="reference external" href="https://github.com/LiberTEM/LiberTEM/issues/503">#503</a>, <a class="reference external" href="https://github.com/LiberTEM/LiberTEM/pull/507">#507</a>, <a class="reference external" href="https://github.com/LiberTEM/LiberTEM/pull/508">#508</a>)</p></li>
+</ul>
+</div>
+<div class="section" id="obsolescence">
+<h3>Obsolescence<a class="headerlink" href="#obsolescence" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><p>The Job interface is planned to be replaced with an implementation based on UDFs in one of the upcoming releases.</p></li>
+</ul>
+</div>
+<div class="section" id="misc">
+<h3>Misc<a class="headerlink" href="#misc" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><p>Split up the bobfinder code between several files to reduce file size (<a class="reference external" href="https://github.com/LiberTEM/LiberTEM/pull/468">#468</a>)</p></li>
+</ul>
+</div>
+</div>
+<div class="section" id="v0-2-2">
+<span id="id2"></span><h2>0.2.2<a class="headerlink" href="#v0-2-2" title="Permalink to this headline">¶</a></h2>
+<a class="reference external image-reference" href="https://doi.org/10.5281/zenodo.3489385"><img alt="https://zenodo.org/badge/DOI/10.5281/zenodo.3489385.svg" src="https://zenodo.org/badge/DOI/10.5281/zenodo.3489385.svg" /></a>
+<p>Point release to fix a number of minor issues, most notably PR <a class="reference external" href="https://github.com/LiberTEM/LiberTEM/pull/439">#439</a> that
+should have been merged for version 0.2.</p>
+<div class="section" id="id3">
+<h3>Bug fixes<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><p>Trigger a timeout when guessing parameters for HDF5 takes too long (<a class="reference external" href="https://github.com/LiberTEM/LiberTEM/issues/440">#440</a> , <a class="reference external" href="https://github.com/LiberTEM/LiberTEM/pull/449">#449</a>)</p></li>
+<li><p>Slightly improved error and validation handling when opening files with GUI (<a class="reference external" href="https://github.com/LiberTEM/LiberTEM/commit/ec74c1346d93eff58d9e2201a7ead5af7aa7cf44">ec74c13</a>)</p></li>
+<li><p>Recognize BLO file type (<a class="reference external" href="https://github.com/LiberTEM/LiberTEM/issues/432">#432</a>)</p></li>
+<li><p>Fixed a glitch where negative peak elevations were possible (<a class="reference external" href="https://github.com/LiberTEM/LiberTEM/pull/446">#446</a>)</p></li>
+<li><p>Update examples to match 0.2 release (<a class="reference external" href="https://github.com/LiberTEM/LiberTEM/pull/439">#439</a>)</p></li>
+</ul>
+</div>
+</div>
+<div class="section" id="v0-2-1">
+<span id="id4"></span><h2>0.2.1<a class="headerlink" href="#v0-2-1" title="Permalink to this headline">¶</a></h2>
+<a class="reference external image-reference" href="https://doi.org/10.5281/zenodo.3474968"><img alt="https://zenodo.org/badge/DOI/10.5281/zenodo.3474968.svg" src="https://zenodo.org/badge/DOI/10.5281/zenodo.3474968.svg" /></a>
+<p>Point release to fix a bug in the Zenodo upload for production releases.</p>
+</div>
+<div class="section" id="v0-2-0">
+<span id="id5"></span><h2>0.2.0<a class="headerlink" href="#v0-2-0" title="Permalink to this headline">¶</a></h2>
+<p>This release constitutes a major update after almost a year of development.
+Systematic change management starts with this release.</p>
+<p>This is the <a class="reference external" href="https://groups.google.com/d/msg/libertem/p7MVoVqXOs0/vP_tu6K7CwAJ">release message</a>:</p>
+<div class="section" id="user-defined-functions">
+<h3>User-defined functions<a class="headerlink" href="#user-defined-functions" title="Permalink to this headline">¶</a></h3>
+<p>LiberTEM 0.2 offers a new API to define a wide range of user-defined reduction
+functions (UDFs) on distributed data. The interface and implementation offers a
+number of unique features:</p>
+<ul class="simple">
+<li><p>Reductions are defined as functions that are executed on subsets of the data.
+That means they are equally suitable for distributed computing, for interactive
+display of results from a progressing calculation, and for handling live data¹.</p></li>
+<li><p>Interfaces adapted to both simple and complex use cases: From a simple map()
+functionality to complex multi-stage reductions.</p></li>
+<li><p>Rich options to define input and output data for the reduction functions, which
+helps to implement non-trivial operations efficiently within a single pass over
+the input data.</p></li>
+<li><p>Composition and extension through object oriented programming</p></li>
+<li><p>Interfaces that allow highly efficient processing: locality of reference, cache
+efficiency, memory handling</p></li>
+</ul>
+<p>Introduction: <a class="reference external" href="https://libertem.github.io/LiberTEM/udf.html">https://libertem.github.io/LiberTEM/udf.html</a></p>
+<p>Advanced features: <a class="reference external" href="https://libertem.github.io/LiberTEM/udf/advanced.html">https://libertem.github.io/LiberTEM/udf/advanced.html</a></p>
+<p>A big shoutout to Alex (<a class="reference external" href="https://github.com/sk1p">&#64;sk1p</a>) who developed it! 🏆</p>
+<p>¹User-defined functions will work on live data without modification as soon as
+LiberTEM implements back-end support for live data, expected in 2020.</p>
+</div>
+<div class="section" id="support-for-4d-stem-applications">
+<h3>Support for 4D STEM applications<a class="headerlink" href="#support-for-4d-stem-applications" title="Permalink to this headline">¶</a></h3>
+<p>In parallel to the UDF interface, we have implemented a number of applications
+that make use of the new facilities:</p>
+<ul class="simple">
+<li><p>Correlation-based peak finding and refinement for CBED (credit: Karina Ruzaeva <a class="reference external" href="https://github.com/kruzaeva">&#64;kruzaeva</a>)</p></li>
+<li><p>Strain mapping</p></li>
+<li><p>Clustering</p></li>
+<li><p>Fluctuation EM</p></li>
+<li><p>Radial Fourier Series (advanced Fluctuation EM)</p></li>
+</ul>
+<p>More details and examples: <a class="reference external" href="https://libertem.github.io/LiberTEM/applications.html">https://libertem.github.io/LiberTEM/applications.html</a></p>
+</div>
+<div class="section" id="extended-documentation">
+<h3>Extended documentation<a class="headerlink" href="#extended-documentation" title="Permalink to this headline">¶</a></h3>
+<p>We have greatly improved the coverage of our documentation:
+<a class="reference external" href="https://libertem.github.io/LiberTEM/index.html#documentation">https://libertem.github.io/LiberTEM/index.html#documentation</a></p>
+</div>
+<div class="section" id="fully-automated-release-pipeline">
+<h3>Fully automated release pipeline<a class="headerlink" href="#fully-automated-release-pipeline" title="Permalink to this headline">¶</a></h3>
+<p>Alex (<a class="reference external" href="https://github.com/sk1p">&#64;sk1p</a>) invested a great deal of effort into fully automating our release
+process. From now on, we will be able to release more often, including service
+releases. 🚀</p>
+</div>
+<div class="section" id="basic-dask-distributed-array-integration">
+<h3>Basic dask.distributed array integration<a class="headerlink" href="#basic-dask-distributed-array-integration" title="Permalink to this headline">¶</a></h3>
+<p>LiberTEM can generate efficient dask.distributed arrays from all supported
+dataset types with this release. That means it should be possible to use our high-performance file
+readers in applications outside of LiberTEM.</p>
+</div>
+<div class="section" id="file-formats">
+<h3>File formats<a class="headerlink" href="#file-formats" title="Permalink to this headline">¶</a></h3>
+<p>Support for various file formats has improved. More details:
+<a class="reference external" href="https://libertem.github.io/LiberTEM/formats.html">https://libertem.github.io/LiberTEM/formats.html</a></p>
+</div>
+</div>
+<div class="section" id="v0-1-0">
+<span id="id6"></span><h2>0.1.0<a class="headerlink" href="#v0-1-0" title="Permalink to this headline">¶</a></h2>
+<p>Initial release of a minimum viable product and proof of concept.</p>
+<p>Support for applying masks with high throughput on distributed systems with
+interactive web GUI display and scripting capability.</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="index.html">
+    <img class="logo" src="_static/logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">GUI usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="concepts.html">Concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="formats.html">Loading data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="udf.html">User-defined functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="applications.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="performance.html">Performance</a></li>
+<li class="toctree-l1"><a class="reference internal" href="debugging.html">Debugging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/index.html">Reference</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Changelog</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#v0-3-0">0.3.0</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#v0-2-2">0.2.2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#v0-2-1">0.2.1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#v0-2-0">0.2.0</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#v0-1-0">0.1.0</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tips.html">Tips and tricks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_python.html">Why Python?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gsoc.html">GSoC 2019 ideas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="authorship.html">Authorship policy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="citing.html">Citing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="acknowledgments.html">Acknowledgments</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="reference/caching.html" title="previous chapter">Distributed caching layer</a></li>
+      <li>Next: <a href="tips.html" title="next chapter">Tips and tricks</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, LiberTEM Authors.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/changelog.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

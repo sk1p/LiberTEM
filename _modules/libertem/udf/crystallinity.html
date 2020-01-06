@@ -1,0 +1,252 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>libertem.udf.crystallinity &#8212; LiberTEM 0.4.0.dev0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    <link rel="shortcut icon" href="../../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for libertem.udf.crystallinity</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">libertem.masks</span> <span class="kn">import</span> <span class="n">_make_circular_mask</span>
+<span class="kn">from</span> <span class="nn">libertem.udf</span> <span class="kn">import</span> <span class="n">UDF</span>
+
+
+<div class="viewcode-block" id="CrystallinityUDF"><a class="viewcode-back" href="../../../reference/app/phasechange.html#libertem.udf.crystallinity.CrystallinityUDF">[docs]</a><span class="k">class</span> <span class="nc">CrystallinityUDF</span><span class="p">(</span><span class="n">UDF</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Determine crystallinity by integration over a ring in the fourier spectrum of each frame.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="CrystallinityUDF.__init__"><a class="viewcode-back" href="../../../reference/app/phasechange.html#libertem.udf.crystallinity.CrystallinityUDF.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rad_in</span><span class="p">,</span> <span class="n">rad_out</span><span class="p">,</span> <span class="n">real_center</span><span class="p">,</span> <span class="n">real_rad</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; cryst_udf = CrystallinityUDF(rad_in=4, rad_out=6, real_center=(8, 8), real_rad=3)</span>
+<span class="sd">        &gt;&gt;&gt; result = ctx.run_udf(dataset=dataset, udf=cryst_udf)</span>
+<span class="sd">        &gt;&gt;&gt; np.array(result[&quot;intensity&quot;]).shape</span>
+<span class="sd">        (16, 16)</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        rad_in: float</span>
+<span class="sd">            Inner radius in pixels of a ring mask for the integration in Fourier space</span>
+
+<span class="sd">        rad_out: float</span>
+<span class="sd">            Outer radius in pixels of a ring mask for the integration in Fourier space</span>
+
+<span class="sd">        real_center: Tuple[float], optional</span>
+<span class="sd">            (y,x) - pixels, coordinates of a center of a circle for a masking out zero-order peak</span>
+<span class="sd">            in real space.</span>
+
+<span class="sd">        real_rad: float, optional</span>
+<span class="sd">            Radius in pixels of circle for a masking out zero-order peak in real space.</span>
+<span class="sd">            If one of real_center or real_rad is missing: the integration will be done without</span>
+<span class="sd">            masking zero-order peak out.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">rad_in</span><span class="o">=</span><span class="n">rad_in</span><span class="p">,</span> <span class="n">rad_out</span><span class="o">=</span><span class="n">rad_out</span><span class="p">,</span>
+                         <span class="n">real_center</span><span class="o">=</span><span class="n">real_center</span><span class="p">,</span> <span class="n">real_rad</span><span class="o">=</span><span class="n">real_rad</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">get_result_buffers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s1">&#39;intensity&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span>
+                <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;nav&quot;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span>
+            <span class="p">),</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">get_task_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">sigshape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">partition_shape</span><span class="o">.</span><span class="n">sig</span><span class="p">)</span>
+        <span class="n">rad_in</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">rad_in</span>
+        <span class="n">rad_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">rad_out</span>
+        <span class="n">real_center</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">real_center</span>
+        <span class="n">real_rad</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">real_rad</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">real_center</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">real_rad</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">real_mask</span> <span class="o">=</span> <span class="mi">1</span><span class="o">-</span><span class="mi">1</span><span class="o">*</span><span class="n">_make_circular_mask</span><span class="p">(</span>
+                <span class="n">real_center</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">real_center</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">sigshape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">sigshape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">real_rad</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">real_mask</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">fourier_mask_out</span> <span class="o">=</span> <span class="mi">1</span><span class="o">*</span><span class="n">_make_circular_mask</span><span class="p">(</span>
+            <span class="n">sigshape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">sigshape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">sigshape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">sigshape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">rad_out</span>
+        <span class="p">)</span>
+        <span class="n">fourier_mask_in</span> <span class="o">=</span> <span class="mi">1</span><span class="o">*</span><span class="n">_make_circular_mask</span><span class="p">(</span>
+            <span class="n">sigshape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">sigshape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">sigshape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">sigshape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">rad_in</span>
+        <span class="p">)</span>
+        <span class="n">fourier_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftshift</span><span class="p">(</span><span class="n">fourier_mask_out</span> <span class="o">-</span> <span class="n">fourier_mask_in</span><span class="p">)</span>
+        <span class="n">half_fourier_mask</span> <span class="o">=</span> <span class="n">fourier_mask</span><span class="p">[:,</span> <span class="p">:</span><span class="nb">int</span><span class="p">(</span><span class="n">fourier_mask</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="mf">0.5</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;real_mask&#39;</span><span class="p">:</span> <span class="n">real_mask</span><span class="p">,</span>
+            <span class="s1">&#39;half_fourier_mask&#39;</span><span class="p">:</span> <span class="n">half_fourier_mask</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="n">kwargs</span>
+
+    <span class="k">def</span> <span class="nf">process_frame</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">):</span>
+        <span class="n">h_f_mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">task_data</span><span class="o">.</span><span class="n">half_fourier_mask</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">task_data</span><span class="o">.</span><span class="n">real_mask</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">maskedframe</span> <span class="o">=</span> <span class="n">frame</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">task_data</span><span class="o">.</span><span class="n">real_mask</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">maskedframe</span> <span class="o">=</span> <span class="n">frame</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">intensity</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">rfft2</span><span class="p">(</span><span class="n">maskedframe</span><span class="p">))</span><span class="o">*</span><span class="n">h_f_mask</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="run_analysis_crystall"><a class="viewcode-back" href="../../../reference/app/phasechange.html#libertem.udf.crystallinity.run_analysis_crystall">[docs]</a><span class="k">def</span> <span class="nf">run_analysis_crystall</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">rad_in</span><span class="p">,</span> <span class="n">rad_out</span><span class="p">,</span> <span class="n">real_center</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">real_rad</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">roi</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return a value after integration of Fourier spectrum for each frame over ring.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ctx: Context</span>
+<span class="sd">        Context class that contains methods for loading datasets,</span>
+<span class="sd">        creating jobs on them and running them</span>
+
+<span class="sd">    dataset: DataSet</span>
+<span class="sd">        A dataset with 1- or 2-D scan dimensions and 2-D frame dimensions</span>
+
+<span class="sd">    rad_in: int</span>
+<span class="sd">        Inner radius in pixels of a ring mask for the integration in Fourier space</span>
+
+<span class="sd">    rad_out: int</span>
+<span class="sd">        Outer radius in pixels of a ring mask for the integration in Fourier space</span>
+
+<span class="sd">    real_center: Tuple[float], optional</span>
+<span class="sd">        (y,x) - pixels, coordinates of a center of a circle for a masking out zero-order peak</span>
+<span class="sd">        in real space.</span>
+
+<span class="sd">    real_rad: int, optional</span>
+<span class="sd">        Radius in pixels of circle for a masking out zero-order peak in real space.</span>
+<span class="sd">        If one of real_center or real_rad is missing: the integration will be done without</span>
+<span class="sd">        masking zero-order peak out.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pass_results: dict</span>
+<span class="sd">        Returns a &quot;crystallinity&quot; value for each frame.</span>
+<span class="sd">        To return 2-D array use pass_results[&#39;intensity&#39;].data</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">udf</span> <span class="o">=</span> <span class="n">CrystallinityUDF</span><span class="p">(</span>
+        <span class="n">rad_in</span><span class="o">=</span><span class="n">rad_in</span><span class="p">,</span> <span class="n">rad_out</span><span class="o">=</span><span class="n">rad_out</span><span class="p">,</span> <span class="n">real_center</span><span class="o">=</span><span class="n">real_center</span><span class="p">,</span> <span class="n">real_rad</span><span class="o">=</span><span class="n">real_rad</span>
+        <span class="p">)</span>
+    <span class="n">pass_results</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">run_udf</span><span class="p">(</span><span class="n">dataset</span><span class="o">=</span><span class="n">dataset</span><span class="p">,</span> <span class="n">udf</span><span class="o">=</span><span class="n">udf</span><span class="p">,</span> <span class="n">roi</span><span class="o">=</span><span class="n">roi</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">pass_results</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../../../index.html">
+    <img class="logo" src="../../../_static/logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">GUI usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../concepts.html">Concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../formats.html">Loading data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../udf.html">User-defined functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../applications.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../performance.html">Performance</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../debugging.html">Debugging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference/index.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tips.html">Tips and tricks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../why_python.html">Why Python?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../gsoc.html">GSoC 2019 ideas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../authorship.html">Authorship policy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../citing.html">Citing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../acknowledgments.html">Acknowledgments</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, LiberTEM Authors.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

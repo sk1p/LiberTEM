@@ -1,0 +1,1178 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>LiberTEM Context API &#8212; LiberTEM 0.4.0.dev0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    <link rel="shortcut icon" href="../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="UDF API reference" href="udf.html" />
+    <link rel="prev" title="Reference" href="index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="libertem-context-api">
+<h1>LiberTEM Context API<a class="headerlink" href="#libertem-context-api" title="Permalink to this headline">¶</a></h1>
+<p>See <a class="reference internal" href="../api.html#api-documentation"><span class="std std-ref">Python API</span></a> for introduction and complete examples.</p>
+<div class="section" id="module-libertem.api">
+<span id="context"></span><h2>Context<a class="headerlink" href="#module-libertem.api" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="libertem.api.Context">
+<em class="property">class </em><code class="sig-prename descclassname">libertem.api.</code><code class="sig-name descname">Context</code><span class="sig-paren">(</span><em class="sig-param">executor=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/api.html#Context"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.api.Context" title="Permalink to this definition">¶</a></dt>
+<dd><p>Context is the main entry point of the LiberTEM API. It contains
+methods for loading datasets, creating jobs on them and running
+them.</p>
+<dl class="method">
+<dt id="libertem.api.Context.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">executor=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/api.html#Context.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.api.Context.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new context. In the background, this creates a suitable
+executor and spins up a local Dask cluster.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>executor</strong> (<em>JobExecutor</em><em> or </em><a class="reference external" href="https://docs.python.org/3.7/library/constants.html#None" title="(in Python v3.7)"><em>None</em></a>) – If None, create a
+<code class="xref py py-class docutils literal notranslate"><span class="pre">DaskJobExecutor</span></code> that uses all cores
+on the local system.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ctx</span> <span class="o">=</span> <span class="n">libertem</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">Context</span><span class="p">()</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Create a Context using an inline executor for debugging</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">libertem.executor.inline</span> <span class="kn">import</span> <span class="n">InlineJobExecutor</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">debug_ctx</span> <span class="o">=</span> <span class="n">libertem</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">Context</span><span class="p">(</span><span class="n">executor</span><span class="o">=</span><span class="n">InlineJobExecutor</span><span class="p">())</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="libertem.api.Context.create_com_analysis">
+<code class="sig-name descname">create_com_analysis</code><span class="sig-paren">(</span><em class="sig-param">dataset</em>, <em class="sig-param">cx: int = None</em>, <em class="sig-param">cy: int = None</em>, <em class="sig-param">mask_radius: int = None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/api.html#Context.create_com_analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.api.Context.create_com_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a center-of-mass (first moment) analysis, possibly masked.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset</strong> – the dataset to work on</p></li>
+<li><p><strong>cx</strong> – reference center x value</p></li>
+<li><p><strong>cy</strong> – reference center y value</p></li>
+<li><p><strong>mask_radius</strong> – mask out intensity outside of mask_radius from (cy, cx)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>COMAnalysis</strong> – When run by the Context, this Analysis generates a
+<a class="reference internal" href="#libertem.analysis.com.COMResultSet" title="libertem.analysis.com.COMResultSet"><code class="xref py py-class docutils literal notranslate"><span class="pre">libertem.analysis.com.COMResultSet</span></code></a>.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.Analysis" title="libertem.analysis.base.Analysis">libertem.analysis.base.Analysis</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="libertem.api.Context.create_disk_analysis">
+<code class="sig-name descname">create_disk_analysis</code><span class="sig-paren">(</span><em class="sig-param">dataset</em>, <em class="sig-param">cx: int = None</em>, <em class="sig-param">cy: int = None</em>, <em class="sig-param">r: int = None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/api.html#Context.create_disk_analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.api.Context.create_disk_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an Analysis that integrates over a disk (i.e. filled circle).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset</strong> – the dataset to work on</p></li>
+<li><p><strong>cx</strong> – center x value</p></li>
+<li><p><strong>cy</strong> – center y value</p></li>
+<li><p><strong>r</strong> – radius of the disk</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>DiskMaskAnalysis</strong> – When run by the Context, this Analysis generates a
+<a class="reference internal" href="#libertem.analysis.masks.SingleMaskResultSet" title="libertem.analysis.masks.SingleMaskResultSet"><code class="xref py py-class docutils literal notranslate"><span class="pre">libertem.analysis.masks.SingleMaskResultSet</span></code></a>.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.Analysis" title="libertem.analysis.base.Analysis">libertem.analysis.base.Analysis</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="libertem.api.Context.create_mask_analysis">
+<code class="sig-name descname">create_mask_analysis</code><span class="sig-paren">(</span><em class="sig-param">factories</em>, <em class="sig-param">dataset</em>, <em class="sig-param">use_sparse=None</em>, <em class="sig-param">mask_count=None</em>, <em class="sig-param">mask_dtype=None</em>, <em class="sig-param">dtype=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/api.html#Context.create_mask_analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.api.Context.create_mask_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a mask application analysis. Each factory function should, when called,
+return a numpy array with the same shape as frames in the dataset (so dataset.shape.sig).</p>
+<p>This is a more high-level method than <cite>create_mask_job</cite> and differs in the way the result
+is returned. With <cite>create_mask_job</cite>, it is a single numpy array, here we split it up for
+each mask we apply, make some default visualization available etc.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>factories</strong> (<em>Union</em><em>[</em><em>Callable</em><em>[</em><em>[</em><em>]</em><em>, </em><em>array_like</em><em>]</em><em>, </em><em>Iterable</em><em>[</em><em>Callable</em><em>[</em><em>[</em><em>]</em><em>, </em><em>array_like</em><em>]</em><em>]</em><em>]</em>) – Function or list of functions that take no arguments and create masks. The returned
+masks can be numpy arrays, scipy.sparse or sparse <a class="reference external" href="https://sparse.pydata.org/">https://sparse.pydata.org/</a> matrices.
+The mask factories should not reference large objects because they can create
+significant overheads when they are pickled and unpickled.
+If a single function is specified, the first dimension is interpreted as the mask index.</p></li>
+<li><p><strong>dataset</strong> (<a class="reference internal" href="dataset.html#libertem.io.dataset.base.DataSet" title="libertem.io.dataset.base.DataSet"><em>libertem.io.dataset.base.DataSet</em></a>) – dataset to work on</p></li>
+<li><p><strong>use_sparse</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#bool" title="(in Python v3.7)"><em>bool</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3.7/library/constants.html#None" title="(in Python v3.7)"><em>None</em></a>) – <ul>
+<li><p>None (default): Use sparse matrix multiplication if all factory functions return a             sparse mask, otherwise convert all masks to dense matrices and use dense matrix             multiplication</p></li>
+<li><p>True: Convert all masks to sparse matrices.</p></li>
+<li><p>False: Convert all masks to dense matrices.</p></li>
+</ul>
+</p></li>
+<li><p><strong>mask_count</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a><em>, </em><em>optional</em>) – Specify the number of masks if a single factory function is used so that the
+number of masks can be determined without calling the factory function.</p></li>
+<li><p><strong>mask_dtype</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.dtype.html#numpy.dtype" title="(in NumPy v1.17)"><em>numpy.dtype</em></a><em>, </em><em>optional</em>) – Specify the dtype of the masks so that mask dtype
+can be determined without calling the mask factory functions. This can be used to
+override the mask dtype in the result dtype determination. As an example, setting
+this to np.float32 means that masks of type float64 will not switch the calculation
+and result dtype to float64 or complex128.</p></li>
+<li><p><strong>dtype</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.dtype.html#numpy.dtype" title="(in NumPy v1.17)"><em>numpy.dtype</em></a><em>, </em><em>optional</em>) – Specify the dtype to do the calculation in. Integer dtypes are possible if
+the numpy casting rules allow this for source and mask data.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>MasksAnalysis</strong> – When run by the Context, this Analysis generates a
+<a class="reference internal" href="#libertem.analysis.masks.MasksResultSet" title="libertem.analysis.masks.MasksResultSet"><code class="xref py py-class docutils literal notranslate"><span class="pre">libertem.analysis.masks.MasksResultSet</span></code></a>.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.Analysis" title="libertem.analysis.base.Analysis">libertem.analysis.base.Analysis</a></p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Use intermediate variables instead of referencing</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># large complex objects like a dataset within the</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># factory function</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">shape</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">sig</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">job</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">create_mask_analysis</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">factories</span><span class="o">=</span><span class="p">[</span><span class="k">lambda</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">shape</span><span class="p">)],</span>
+<span class="gp">... </span>    <span class="n">dataset</span><span class="o">=</span><span class="n">dataset</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">job</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span><span class="o">.</span><span class="n">mask_0</span><span class="o">.</span><span class="n">raw_data</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">(16, 16)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="libertem.api.Context.create_mask_job">
+<code class="sig-name descname">create_mask_job</code><span class="sig-paren">(</span><em class="sig-param">factories</em>, <em class="sig-param">dataset</em>, <em class="sig-param">use_sparse=None</em>, <em class="sig-param">mask_count=None</em>, <em class="sig-param">mask_dtype=None</em>, <em class="sig-param">dtype=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/api.html#Context.create_mask_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.api.Context.create_mask_job" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a low-level mask application job. Each factory function should, when called,
+return a numpy array with the same shape as frames in the dataset (so dataset.shape.sig).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>factories</strong> (<em>Union</em><em>[</em><em>Callable</em><em>[</em><em>[</em><em>]</em><em>, </em><em>array_like</em><em>]</em><em>, </em><em>Iterable</em><em>[</em><em>Callable</em><em>[</em><em>[</em><em>]</em><em>, </em><em>array_like</em><em>]</em><em>]</em><em>]</em>) – Function or list of functions that take no arguments and create masks. The returned
+masks can be
+numpy arrays, scipy.sparse or sparse <a class="reference external" href="https://sparse.pydata.org/">https://sparse.pydata.org/</a> matrices. The mask
+factories should not reference large objects because they can create significant
+overheads when they are pickled and unpickled.</p></li>
+<li><p><strong>dataset</strong> (<a class="reference internal" href="dataset.html#libertem.io.dataset.base.DataSet" title="libertem.io.dataset.base.DataSet"><em>libertem.io.dataset.base.DataSet</em></a>) – dataset to work on</p></li>
+<li><p><strong>use_sparse</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#bool" title="(in Python v3.7)"><em>bool</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3.7/library/constants.html#None" title="(in Python v3.7)"><em>None</em></a>) – <ul>
+<li><p>None (default): Use sparse matrix multiplication if all factory functions return a             sparse mask, otherwise convert all masks to dense matrices and use dense matrix             multiplication</p></li>
+<li><p>True: Convert all masks to sparse matrices.</p></li>
+<li><p>False: Convert all masks to dense matrices.</p></li>
+</ul>
+</p></li>
+<li><p><strong>mask_count</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a><em>, </em><em>optional</em>) – Specify the number of masks if a single factory function is used so that the
+number of masks can be determined without calling the factory function.</p></li>
+<li><p><strong>mask_dtype</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.dtype.html#numpy.dtype" title="(in NumPy v1.17)"><em>numpy.dtype</em></a><em>, </em><em>optional</em>) – Specify the dtype of the masks so that mask dtype
+can be determined without calling the mask factory functions. This can be used to
+override the mask dtype in the result dtype determination. As an example, setting
+this to np.float32 means that masks of type float64 will not switch the calculation
+and result dtype to float64 or complex128.</p></li>
+<li><p><strong>dtype</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.dtype.html#numpy.dtype" title="(in NumPy v1.17)"><em>numpy.dtype</em></a><em>, </em><em>optional</em>) – Specify the dtype to do the calculation in. Integer dtypes are possible if
+the numpy casting rules allow this for source and mask data.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>ApplyMasksJob</strong> – When run by the Context, this Job creates a <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></a> of
+shape (n_masks, prod(ds.shape.nav))</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.job.base.Job" title="libertem.job.base.Job">libertem.job.base.Job</a></p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Use intermediate variables instead of referencing</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># large complex objects like a dataset within the</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># factory function</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">shape</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">sig</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">job</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">create_mask_job</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">factories</span><span class="o">=</span><span class="p">[</span><span class="k">lambda</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">shape</span><span class="p">)],</span>
+<span class="gp">... </span>    <span class="n">dataset</span><span class="o">=</span><span class="n">dataset</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">job</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="libertem.api.Context.create_pick_analysis">
+<code class="sig-name descname">create_pick_analysis</code><span class="sig-paren">(</span><em class="sig-param">dataset</em>, <em class="sig-param">x: int</em>, <em class="sig-param">y: int = None</em>, <em class="sig-param">z: int = None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/api.html#Context.create_pick_analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.api.Context.create_pick_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an Analysis that picks a single frame / signal element from (z, y, x).
+The number of parameters must match number of navigation dimensions in the dataset,
+for example if you have a 4D dataset with two signal dimensions and two navigation
+dimensions, you need to specify x and y.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset</strong> – The dataset to work on</p></li>
+<li><p><strong>x</strong> – x coordinate</p></li>
+<li><p><strong>y</strong> – y coordinate</p></li>
+<li><p><strong>z</strong> – z coordinate</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>PickFrameAnalysis</strong> – When run by the Context, this Analysis generates a
+<a class="reference internal" href="#libertem.analysis.raw.PickResultSet" title="libertem.analysis.raw.PickResultSet"><code class="xref py py-class docutils literal notranslate"><span class="pre">libertem.analysis.raw.PickResultSet</span></code></a>.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.Analysis" title="libertem.analysis.base.Analysis">libertem.analysis.base.Analysis</a></p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">dataset</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">load</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">filetype</span><span class="o">=</span><span class="s2">&quot;memory&quot;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span>
+<span class="gp">... </span>    <span class="n">sig_dims</span><span class="o">=</span><span class="mi">2</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">job</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">create_pick_analysis</span><span class="p">(</span><span class="n">dataset</span><span class="o">=</span><span class="n">dataset</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="mi">9</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">job</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">intensity</span><span class="o">.</span><span class="n">raw_data</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">sig</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="libertem.api.Context.create_pick_job">
+<code class="sig-name descname">create_pick_job</code><span class="sig-paren">(</span><em class="sig-param">dataset, origin: Tuple[int], shape: Tuple[int] = None</em><span class="sig-paren">)</span> &#x2192; numpy.ndarray<a class="reference internal" href="../_modules/libertem/api.html#Context.create_pick_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.api.Context.create_pick_job" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a job that picks raw data from <cite>origin</cite> with the size defined in <cite>shape</cite>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>if you just want to read single frames, it is easier to use
+<a class="reference internal" href="#libertem.api.Context.create_pick_analysis" title="libertem.api.Context.create_pick_analysis"><code class="xref py py-meth docutils literal notranslate"><span class="pre">create_pick_analysis()</span></code></a>.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>It is not efficient to use this method on large parts of datasets, please consider
+implementing a UDF instead.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset</strong> – The dataset to work on</p></li>
+<li><p><strong>origin</strong> – Where to start reading. You can either specify all dimensions, or only nav dimensions,
+in which case the signal is read starting from (0, …, 0).</p></li>
+<li><p><strong>shape</strong> – The shape of the data to read. If None, read a “frame” or single signal element</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>PickFrameJob</strong> – A job that returns the specified raw data as <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></a></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.job.base.Job" title="libertem.job.base.Job">libertem.job.base.Job</a></p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">dataset</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">load</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">filetype</span><span class="o">=</span><span class="s2">&quot;memory&quot;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span>
+<span class="gp">... </span>    <span class="n">sig_dims</span><span class="o">=</span><span class="mi">2</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">origin</span> <span class="o">=</span> <span class="p">(</span><span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">job</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">create_pick_job</span><span class="p">(</span><span class="n">dataset</span><span class="o">=</span><span class="n">dataset</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="n">origin</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">job</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">sig</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="libertem.api.Context.create_point_analysis">
+<code class="sig-name descname">create_point_analysis</code><span class="sig-paren">(</span><em class="sig-param">dataset</em>, <em class="sig-param">x: int = None</em>, <em class="sig-param">y: int = None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/api.html#Context.create_point_analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.api.Context.create_point_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an Analysis that selects the pixel with coords (y, x) from each frame</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><strong>PointMaskAnalysis</strong> – When run by the Context, this Analysis generates a
+<a class="reference internal" href="#libertem.analysis.masks.SingleMaskResultSet" title="libertem.analysis.masks.SingleMaskResultSet"><code class="xref py py-class docutils literal notranslate"><span class="pre">libertem.analysis.masks.SingleMaskResultSet</span></code></a>.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="#libertem.analysis.base.Analysis" title="libertem.analysis.base.Analysis">libertem.analysis.base.Analysis</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="libertem.api.Context.create_radial_fourier_analysis">
+<code class="sig-name descname">create_radial_fourier_analysis</code><span class="sig-paren">(</span><em class="sig-param">dataset</em>, <em class="sig-param">cx: float = None</em>, <em class="sig-param">cy: float = None</em>, <em class="sig-param">ri: float = None</em>, <em class="sig-param">ro: float = None</em>, <em class="sig-param">n_bins: int = None</em>, <em class="sig-param">max_order: int = None</em>, <em class="sig-param">use_sparse: bool = None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/api.html#Context.create_radial_fourier_analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.api.Context.create_radial_fourier_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an Analysis that calculates the Fourier transform of rings around the center.</p>
+<p>See <a class="reference internal" href="../app/amorphous.html#radialfourier-app"><span class="std std-ref">Radial Fourier Series</span></a> for details on the method!</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset</strong> – the dataset to work on</p></li>
+<li><p><strong>cx</strong> – center x value</p></li>
+<li><p><strong>cy</strong> – center y value</p></li>
+<li><p><strong>ri</strong> – inner radius</p></li>
+<li><p><strong>ro</strong> – outer radius</p></li>
+<li><p><strong>n_bins</strong> – number of bins</p></li>
+<li><p><strong>max_order</strong> – maximum order of calculated Fourier component</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>RadialFourierAnalysis</strong> – When run by the Context, this Analysis generates a
+<a class="reference internal" href="app/amorphous.html#libertem.analysis.radialfourier.RadialFourierResultSet" title="libertem.analysis.radialfourier.RadialFourierResultSet"><code class="xref py py-class docutils literal notranslate"><span class="pre">libertem.analysis.radialfourier.RadialFourierResultSet</span></code></a>.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.Analysis" title="libertem.analysis.base.Analysis">libertem.analysis.base.Analysis</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="libertem.api.Context.create_ring_analysis">
+<code class="sig-name descname">create_ring_analysis</code><span class="sig-paren">(</span><em class="sig-param">dataset</em>, <em class="sig-param">cx: int = None</em>, <em class="sig-param">cy: int = None</em>, <em class="sig-param">ri: int = None</em>, <em class="sig-param">ro: int = None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/api.html#Context.create_ring_analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.api.Context.create_ring_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an Analysis that integrates over a ring.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset</strong> – the dataset to work on</p></li>
+<li><p><strong>cx</strong> – center x value</p></li>
+<li><p><strong>cy</strong> – center y value</p></li>
+<li><p><strong>ri</strong> – inner radius</p></li>
+<li><p><strong>ro</strong> – outer radius</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>RingMaskAnalysis</strong> – When run by the Context, this Analysis generates a
+<a class="reference internal" href="#libertem.analysis.masks.SingleMaskResultSet" title="libertem.analysis.masks.SingleMaskResultSet"><code class="xref py py-class docutils literal notranslate"><span class="pre">libertem.analysis.masks.SingleMaskResultSet</span></code></a>.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.Analysis" title="libertem.analysis.base.Analysis">libertem.analysis.base.Analysis</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="libertem.api.Context.create_sum_analysis">
+<code class="sig-name descname">create_sum_analysis</code><span class="sig-paren">(</span><em class="sig-param">dataset</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/api.html#Context.create_sum_analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.api.Context.create_sum_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an Analysis that sums all signal elements along the navigation
+dimension, preserving the signal dimension.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>dataset</strong> – the dataset to work on</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>SumAnalysis</strong> – When run by the Context, this Analysis generates a
+<a class="reference internal" href="#libertem.analysis.sum.SumResultSet" title="libertem.analysis.sum.SumResultSet"><code class="xref py py-class docutils literal notranslate"><span class="pre">libertem.analysis.sum.SumResultSet</span></code></a>.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.Analysis" title="libertem.analysis.base.Analysis">libertem.analysis.base.Analysis</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="libertem.api.Context.load">
+<code class="sig-name descname">load</code><span class="sig-paren">(</span><em class="sig-param">filetype: str</em>, <em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span> &#x2192; libertem.io.dataset.base.DataSet<a class="reference internal" href="../_modules/libertem/api.html#Context.load"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.api.Context.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load a <cite>DataSet</cite>. As it doesn’t load the whole data into RAM at once,
+you can load and process datasets that are bigger than your available RAM.
+Using fast storage (i.e. SSD) is advisable.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filetype</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – one of: hdfs, hdf5, raw, mib, blo, k2is, ser, frms6, empad, memory, dm</p></li>
+<li><p><strong>args</strong> – passed on to the DataSet implementation</p></li>
+<li><p><strong>kwargs</strong> – passed on to the DataSet implementation</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>DataSet</strong> – The loaded dataset</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="dataset.html#libertem.io.dataset.base.DataSet" title="libertem.io.dataset.base.DataSet">libertem.io.dataset.base.DataSet</a></p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Additional parameters are passed to the concrete
+<a class="reference internal" href="dataset.html#libertem.io.dataset.base.DataSet" title="libertem.io.dataset.base.DataSet"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataSet</span></code></a> implementation.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>See <a class="reference internal" href="dataset.html#dataset-api"><span class="std std-ref">Data Set API</span></a> for format-specific documentation.</p>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="libertem.api.Context.map">
+<code class="sig-name descname">map</code><span class="sig-paren">(</span><em class="sig-param">dataset</em>, <em class="sig-param">f</em>, <em class="sig-param">roi=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/api.html#Context.map"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.api.Context.map" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an <code class="xref py py-class docutils literal notranslate"><span class="pre">AutoUDF</span></code> with function <code class="xref py py-meth docutils literal notranslate"><span class="pre">f()</span></code> and run it on <code class="code docutils literal notranslate"><span class="pre">dataset</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset</strong> – The dataset to work on</p></li>
+<li><p><strong>f</strong> – Function that accepts a frame as the only parameter. It should return a strongly
+reduced output compared to the size of a frame.</p></li>
+<li><p><strong>roi</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – region of interest as bool mask over the navigation axes of the dataset</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>BufferWrapper</strong> – The result of the UDF. Access the underlying numpy array using the
+<a class="reference internal" href="udf.html#libertem.common.buffers.BufferWrapper.data" title="libertem.common.buffers.BufferWrapper.data"><code class="xref py py-attr docutils literal notranslate"><span class="pre">data</span></code></a> property.
+Shape and dtype is inferred automatically from <code class="code docutils literal notranslate"><span class="pre">f</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="udf.html#libertem.common.buffers.BufferWrapper" title="libertem.common.buffers.BufferWrapper">libertem.common.buffers.BufferWrapper</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="libertem.api.Context.run">
+<code class="sig-name descname">run</code><span class="sig-paren">(</span><em class="sig-param">job: Union[libertem.job.base.Job, libertem.analysis.base.Analysis], roi=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/api.html#Context.run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.api.Context.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run the given <a class="reference internal" href="#libertem.job.base.Job" title="libertem.job.base.Job"><code class="xref py py-class docutils literal notranslate"><span class="pre">Job</span></code></a> or <a class="reference internal" href="#libertem.analysis.base.Analysis" title="libertem.analysis.base.Analysis"><code class="xref py py-class docutils literal notranslate"><span class="pre">Analysis</span></code></a>
+and return the result data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>job</strong> – the job or analysis to run</p></li>
+<li><p><strong>roi</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a><em>, </em><em>optional</em>) – Boolean mask of the navigation dimension. This is curently not supported for all
+Analysis types and may raise a <a class="reference external" href="https://docs.python.org/3.7/library/exceptions.html#TypeError" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">TypeError</span></code></a> in that case.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>result</strong> – Running a Job returns a <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></a>, running
+an Analysis returns a <a class="reference internal" href="#libertem.analysis.base.AnalysisResultSet" title="libertem.analysis.base.AnalysisResultSet"><code class="xref py py-class docutils literal notranslate"><span class="pre">libertem.analysis.base.AnalysisResultSet</span></code></a>.
+See the matching <code class="code docutils literal notranslate"><span class="pre">create_*_analysis</span></code> function for documentation
+of the specific AnalysisResultSet subclass or <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></a> that
+is being returned.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a> or <a class="reference internal" href="#libertem.analysis.base.AnalysisResultSet" title="libertem.analysis.base.AnalysisResultSet">libertem.analysis.base.AnalysisResultSet</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="libertem.api.Context.run_udf">
+<code class="sig-name descname">run_udf</code><span class="sig-paren">(</span><em class="sig-param">dataset: libertem.io.dataset.base.DataSet</em>, <em class="sig-param">udf: libertem.udf.base.UDF</em>, <em class="sig-param">roi=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/api.html#Context.run_udf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.api.Context.run_udf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run <cite>udf</cite> on <cite>dataset</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset</strong> – The dataset to work on</p></li>
+<li><p><strong>udf</strong> – UDF instance you want to run</p></li>
+<li><p><strong>roi</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – region of interest as bool mask over the navigation axes of the dataset</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Return value of the UDF containing the result buffers of
+type <a class="reference internal" href="udf.html#libertem.common.buffers.BufferWrapper" title="libertem.common.buffers.BufferWrapper"><code class="xref py py-class docutils literal notranslate"><span class="pre">libertem.common.buffers.BufferWrapper</span></code></a>. Note that a
+<a class="reference internal" href="udf.html#libertem.common.buffers.BufferWrapper" title="libertem.common.buffers.BufferWrapper"><code class="xref py py-class docutils literal notranslate"><span class="pre">BufferWrapper</span></code></a> can be used like
+a <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></a> in many cases because it implements
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">__array__()</span></code>. You can access the underlying numpy array using the
+<a class="reference internal" href="udf.html#libertem.common.buffers.BufferWrapper.data" title="libertem.common.buffers.BufferWrapper.data"><code class="xref py py-attr docutils literal notranslate"><span class="pre">data</span></code></a> property.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#dict" title="(in Python v3.7)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-libertem.job.base">
+<span id="job-api"></span><h2>Job API<a class="headerlink" href="#module-libertem.job.base" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="libertem.job.base.Job">
+<em class="property">class </em><code class="sig-prename descclassname">libertem.job.base.</code><code class="sig-name descname">Job</code><a class="reference internal" href="../_modules/libertem/job/base.html#Job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.job.base.Job" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract base class for Job classes.</p>
+<p>Passing an instance of an <code class="code docutils literal notranslate"><span class="pre">Job</span></code> sub-class to
+<a class="reference internal" href="#libertem.api.Context.run" title="libertem.api.Context.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">libertem.api.Context.run()</span></code></a> will generate a <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></a>. The
+shape, type and content of this array is governed by the specific
+implementation of the <code class="code docutils literal notranslate"><span class="pre">Job</span></code> sub-class.</p>
+<div class="versionchanged">
+<p><span class="versionmodified changed">Changed in version 0.3.0: </span><code class="code docutils literal notranslate"><span class="pre">Job</span></code> is now an abstract base job for documentation purposes
+to hide any implementation details from the user. The previous
+<code class="code docutils literal notranslate"><span class="pre">Job</span></code> base class is now called <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseJob</span></code>.</p>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="module-libertem.analysis.base">
+<span id="analysis-api"></span><h2>Analysis API<a class="headerlink" href="#module-libertem.analysis.base" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="libertem.analysis.base.Analysis">
+<em class="property">class </em><code class="sig-prename descclassname">libertem.analysis.base.</code><code class="sig-name descname">Analysis</code><a class="reference internal" href="../_modules/libertem/analysis/base.html#Analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.analysis.base.Analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract base class for Analysis classes.</p>
+<p>Passing an instance of an <a class="reference internal" href="#libertem.analysis.base.Analysis" title="libertem.analysis.base.Analysis"><code class="xref py py-class docutils literal notranslate"><span class="pre">Analysis</span></code></a> sub-class to
+<a class="reference internal" href="#libertem.api.Context.run" title="libertem.api.Context.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">libertem.api.Context.run()</span></code></a> will generate an <a class="reference internal" href="#libertem.analysis.base.AnalysisResultSet" title="libertem.analysis.base.AnalysisResultSet"><code class="xref py py-class docutils literal notranslate"><span class="pre">AnalysisResultSet</span></code></a>.
+The content of this result set is governed by the specific implementation of
+the <code class="code docutils literal notranslate"><span class="pre">Analysis</span></code> sub-class.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">New in version 0.3.0.</span></p>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="libertem.analysis.base.AnalysisResult">
+<em class="property">class </em><code class="sig-prename descclassname">libertem.analysis.base.</code><code class="sig-name descname">AnalysisResult</code><span class="sig-paren">(</span><em class="sig-param">raw_data</em>, <em class="sig-param">visualized</em>, <em class="sig-param">title</em>, <em class="sig-param">desc</em>, <em class="sig-param">key</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/analysis/base.html#AnalysisResult"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.analysis.base.AnalysisResult" title="Permalink to this definition">¶</a></dt>
+<dd><p>This class represents a single 2D image result from an Analysis.</p>
+<p>Instances of this class are contained in an <a class="reference internal" href="#libertem.analysis.base.AnalysisResultSet" title="libertem.analysis.base.AnalysisResultSet"><code class="xref py py-class docutils literal notranslate"><span class="pre">AnalysisResultSet</span></code></a>.</p>
+<dl class="attribute">
+<dt id="libertem.analysis.base.AnalysisResult.raw_data">
+<code class="sig-name descname">raw_data</code><a class="headerlink" href="#libertem.analysis.base.AnalysisResult.raw_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>The raw numerical data of this result</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="libertem.analysis.base.AnalysisResult.visualized">
+<code class="sig-name descname">visualized</code><a class="headerlink" href="#libertem.analysis.base.AnalysisResult.visualized" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualized result as <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></a> with RGB or RGBA values</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="libertem.analysis.base.AnalysisResult.title">
+<code class="sig-name descname">title</code><a class="headerlink" href="#libertem.analysis.base.AnalysisResult.title" title="Permalink to this definition">¶</a></dt>
+<dd><p>Title for the GUI</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#str" title="(in Python v3.7)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="libertem.analysis.base.AnalysisResult.desc">
+<code class="sig-name descname">desc</code><a class="headerlink" href="#libertem.analysis.base.AnalysisResult.desc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Short description in the GUI</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#str" title="(in Python v3.7)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="libertem.analysis.base.AnalysisResult.key">
+<code class="sig-name descname">key</code><a class="headerlink" href="#libertem.analysis.base.AnalysisResult.key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Key to identify the result in a <a class="reference internal" href="#libertem.analysis.base.AnalysisResultSet" title="libertem.analysis.base.AnalysisResultSet"><code class="xref py py-class docutils literal notranslate"><span class="pre">AnalysisResultSet</span></code></a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#str" title="(in Python v3.7)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="libertem.analysis.base.AnalysisResult.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">raw_data</em>, <em class="sig-param">visualized</em>, <em class="sig-param">title</em>, <em class="sig-param">desc</em>, <em class="sig-param">key</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/analysis/base.html#AnalysisResult.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.analysis.base.AnalysisResult.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="libertem.analysis.base.AnalysisResultSet">
+<em class="property">class </em><code class="sig-prename descclassname">libertem.analysis.base.</code><code class="sig-name descname">AnalysisResultSet</code><span class="sig-paren">(</span><em class="sig-param">results</em>, <em class="sig-param">raw_results=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/analysis/base.html#AnalysisResultSet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.analysis.base.AnalysisResultSet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Base class for Analysis result sets. <a class="reference internal" href="#libertem.api.Context.run" title="libertem.api.Context.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">libertem.api.Context.run()</span></code></a>
+returns an instance of this class or a subclass. Many of the subclasses are
+just introduced to document the Analysis-specific results (keys) of the
+result set and don’t introduce new functionality.</p>
+<p>The contents of an <a class="reference internal" href="#libertem.analysis.base.AnalysisResultSet" title="libertem.analysis.base.AnalysisResultSet"><code class="xref py py-class docutils literal notranslate"><span class="pre">AnalysisResultSet</span></code></a> can be addressed in four different ways:</p>
+<ol class="arabic simple">
+<li><p>As a container class with the <a class="reference internal" href="#libertem.analysis.base.AnalysisResult.key" title="libertem.analysis.base.AnalysisResult.key"><code class="xref py py-attr docutils literal notranslate"><span class="pre">AnalysisResult.key</span></code></a> properties as attributes
+of type <a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult"><code class="xref py py-class docutils literal notranslate"><span class="pre">AnalysisResult</span></code></a>.</p></li>
+<li><p>As a list of <a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult"><code class="xref py py-class docutils literal notranslate"><span class="pre">AnalysisResult</span></code></a> objects.</p></li>
+<li><p>As an iterator of <a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult"><code class="xref py py-class docutils literal notranslate"><span class="pre">AnalysisResult</span></code></a> objects (since 0.3).</p></li>
+<li><p>As a dictionary of <a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult"><code class="xref py py-class docutils literal notranslate"><span class="pre">AnalysisResult</span></code></a> objects with the <a class="reference internal" href="#libertem.analysis.base.AnalysisResult.key" title="libertem.analysis.base.AnalysisResult.key"><code class="xref py py-attr docutils literal notranslate"><span class="pre">AnalysisResult.key</span></code></a>
+properties as keys.</p></li>
+</ol>
+<p>This allows to implement generic result handling code for an Analysis, for example GUI display,
+as well as specific code for particular Analysis subclasses.</p>
+<dl class="attribute">
+<dt id="libertem.analysis.base.AnalysisResultSet.raw_results">
+<code class="sig-name descname">raw_results</code><a class="headerlink" href="#libertem.analysis.base.AnalysisResultSet.raw_results" title="Permalink to this definition">¶</a></dt>
+<dd><p>Raw results from the underlying numerical processing, if available, otherwise None.</p>
+</dd></dl>
+
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">mask_shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">sig</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">m0</span><span class="p">():</span>
+<span class="gp">... </span>   <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">mask_shape</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">m1</span><span class="p">():</span>
+<span class="gp">... </span>    <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">mask_shape</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="gp">... </span>    <span class="k">return</span> <span class="n">result</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">job</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">create_mask_analysis</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">dataset</span><span class="o">=</span><span class="n">dataset</span><span class="p">,</span> <span class="n">factories</span><span class="o">=</span><span class="p">[</span><span class="n">m0</span><span class="p">,</span> <span class="n">m1</span><span class="p">]</span>
+<span class="gp">... </span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">job</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># As an object with attributes</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">mask_0</span><span class="o">.</span><span class="n">title</span><span class="p">)</span>
+<span class="go">mask 0</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">mask_1</span><span class="o">.</span><span class="n">title</span><span class="p">)</span>
+<span class="go">mask 1</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># As a list</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">title</span><span class="p">)</span>
+<span class="go">mask 0</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># As an iterator</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># New since 0.3.0</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="nb">print</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">title</span><span class="p">)</span>
+<span class="go">mask 0</span>
+<span class="go">mask 1</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># As a dictionary</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;mask_1&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">title</span><span class="p">)</span>
+<span class="go">mask 1</span>
+</pre></div>
+</div>
+<dl class="method">
+<dt id="libertem.analysis.base.AnalysisResultSet.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">results</em>, <em class="sig-param">raw_results=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/analysis/base.html#AnalysisResultSet.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.analysis.base.AnalysisResultSet.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-libertem.analysis.masks"></span><dl class="class">
+<dt id="libertem.analysis.masks.MasksResultSet">
+<em class="property">class </em><code class="sig-prename descclassname">libertem.analysis.masks.</code><code class="sig-name descname">MasksResultSet</code><span class="sig-paren">(</span><em class="sig-param">results</em>, <em class="sig-param">raw_results=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/analysis/masks.html#MasksResultSet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.analysis.masks.MasksResultSet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Running a <code class="xref py py-class docutils literal notranslate"><span class="pre">MasksAnalysis</span></code> via <a class="reference internal" href="#libertem.api.Context.run" title="libertem.api.Context.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">libertem.api.Context.run()</span></code></a> on a dataset
+returns an instance of this class.</p>
+<p>If any of the masks or the dataset contain complex numbers, the regular mask results
+attributes carry the absolute value of the results, and additional attributes with real
+part, imaginary part, phase and full complex result are available.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">New in version 0.3.0.</span></p>
+</div>
+<dl class="attribute">
+<dt>
+<code class="sig-name descname">mask_0, mask_1, ..., mask_&lt;n&gt;</code></dt>
+<dd><p>For dataset and masks containing only real numbers:
+Results of the element-wise multiplication and sum of each individual mask with
+each detector frame. Each mask result has the shape of the navigation dimension.
+These keys contain the absolute value of the result if dataset or masks contain
+complex numbers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult">libertem.analysis.base.AnalysisResult</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="sig-name descname">mask_0, mask_0_real, mask_0_imag, mask_0_angle, mask_0_complex,    mask_1, mask_1_real, ...,    mask_&lt;n&gt;, ..., mask_&lt;n&gt;_complex</code></dt>
+<dd><p>If masks or dataset contain complex numbers: Absolute, real part, imaginary part,
+phase angle, complex result of the element-wise multiplication and sum of each individual
+mask with each detector frame. Each mask result has the shape of the navigation dimension.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult">libertem.analysis.base.AnalysisResult</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="libertem.analysis.masks.SingleMaskResultSet">
+<em class="property">class </em><code class="sig-prename descclassname">libertem.analysis.masks.</code><code class="sig-name descname">SingleMaskResultSet</code><span class="sig-paren">(</span><em class="sig-param">results</em>, <em class="sig-param">raw_results=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/analysis/masks.html#SingleMaskResultSet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.analysis.masks.SingleMaskResultSet" title="Permalink to this definition">¶</a></dt>
+<dd><p>A number of Analyses that are based on applying a single mask create an instance of this class
+as a result when executed via <a class="reference internal" href="#libertem.api.Context.run" title="libertem.api.Context.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">libertem.api.Context.run()</span></code></a>.</p>
+<p>If the dataset contains complex numbers, the regular result attribute carries the
+absolute value of the result, and additional attributes with real part, imaginary part,
+phase and full complex result are available.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">New in version 0.3.0.</span></p>
+</div>
+<dl class="attribute">
+<dt id="libertem.analysis.masks.SingleMaskResultSet.intensity">
+<code class="sig-name descname">intensity</code><a class="headerlink" href="#libertem.analysis.masks.SingleMaskResultSet.intensity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sum of the selected region for each detector frame, with shape of
+the navigation dimension. Absolute of the result if the dataset or mask contains
+complex numbers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult">libertem.analysis.base.AnalysisResult</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="libertem.analysis.masks.SingleMaskResultSet.intensity_real">
+<code class="sig-name descname">intensity_real</code><a class="headerlink" href="#libertem.analysis.masks.SingleMaskResultSet.intensity_real" title="Permalink to this definition">¶</a></dt>
+<dd><p>Real part of the sum of the selected region. This is only available if the dataset
+or mask contains complex numbers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult">libertem.analysis.base.AnalysisResult</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="libertem.analysis.masks.SingleMaskResultSet.intensity_imag">
+<code class="sig-name descname">intensity_imag</code><a class="headerlink" href="#libertem.analysis.masks.SingleMaskResultSet.intensity_imag" title="Permalink to this definition">¶</a></dt>
+<dd><p>Imaginary part of the sum of the selected region. This is only available if the dataset
+contains complex numbers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult">libertem.analysis.base.AnalysisResult</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="libertem.analysis.masks.SingleMaskResultSet.intensity_angle">
+<code class="sig-name descname">intensity_angle</code><a class="headerlink" href="#libertem.analysis.masks.SingleMaskResultSet.intensity_angle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Phase angle of the sum of the selected region. This is only available if the dataset
+or mask contains complex numbers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult">libertem.analysis.base.AnalysisResult</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="libertem.analysis.masks.SingleMaskResultSet.intensity_complex">
+<code class="sig-name descname">intensity_complex</code><a class="headerlink" href="#libertem.analysis.masks.SingleMaskResultSet.intensity_complex" title="Permalink to this definition">¶</a></dt>
+<dd><p>Complex result of the sum of the selected region. This is only available if the dataset
+or mask contains complex numbers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult">libertem.analysis.base.AnalysisResult</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-libertem.analysis.com"></span><dl class="class">
+<dt id="libertem.analysis.com.COMResultSet">
+<em class="property">class </em><code class="sig-prename descclassname">libertem.analysis.com.</code><code class="sig-name descname">COMResultSet</code><span class="sig-paren">(</span><em class="sig-param">results</em>, <em class="sig-param">raw_results=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/analysis/com.html#COMResultSet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.analysis.com.COMResultSet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Running a <code class="xref py py-class docutils literal notranslate"><span class="pre">COMAnalysis</span></code> via <a class="reference internal" href="#libertem.api.Context.run" title="libertem.api.Context.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">libertem.api.Context.run()</span></code></a> on a dataset
+returns an instance of this class.</p>
+<p>This analysis is usually applied to datasets with real values. If the dataset contains
+complex numbers, this result contains the keys <a class="reference internal" href="#libertem.analysis.com.COMResultSet.x_real" title="libertem.analysis.com.COMResultSet.x_real"><code class="xref py py-attr docutils literal notranslate"><span class="pre">x_real</span></code></a>, <a class="reference internal" href="#libertem.analysis.com.COMResultSet.y_real" title="libertem.analysis.com.COMResultSet.y_real"><code class="xref py py-attr docutils literal notranslate"><span class="pre">y_real</span></code></a>,
+<a class="reference internal" href="#libertem.analysis.com.COMResultSet.x_imag" title="libertem.analysis.com.COMResultSet.x_imag"><code class="xref py py-attr docutils literal notranslate"><span class="pre">x_imag</span></code></a>, <a class="reference internal" href="#libertem.analysis.com.COMResultSet.y_imag" title="libertem.analysis.com.COMResultSet.y_imag"><code class="xref py py-attr docutils literal notranslate"><span class="pre">y_imag</span></code></a> instead of the vector field.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">New in version 0.3.0.</span></p>
+</div>
+<dl class="attribute">
+<dt id="libertem.analysis.com.COMResultSet.field">
+<code class="sig-name descname">field</code><a class="headerlink" href="#libertem.analysis.com.COMResultSet.field" title="Permalink to this definition">¶</a></dt>
+<dd><p>Center of mass shift relative to the center given to the analysis within the given radius
+as a vector field with components (x, y). The visualized result uses a
+cubehelix color wheel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult">libertem.analysis.base.AnalysisResult</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="libertem.analysis.com.COMResultSet.magnitude">
+<code class="sig-name descname">magnitude</code><a class="headerlink" href="#libertem.analysis.com.COMResultSet.magnitude" title="Permalink to this definition">¶</a></dt>
+<dd><p>Magnitude of the center of mass shift.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult">libertem.analysis.base.AnalysisResult</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="libertem.analysis.com.COMResultSet.divergence">
+<code class="sig-name descname">divergence</code><a class="headerlink" href="#libertem.analysis.com.COMResultSet.divergence" title="Permalink to this definition">¶</a></dt>
+<dd><p>Divergence of the center of mass vector field at a given point</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult">libertem.analysis.base.AnalysisResult</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="libertem.analysis.com.COMResultSet.x">
+<code class="sig-name descname">x</code><a class="headerlink" href="#libertem.analysis.com.COMResultSet.x" title="Permalink to this definition">¶</a></dt>
+<dd><p>X component of the center of mass shift</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult">libertem.analysis.base.AnalysisResult</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="libertem.analysis.com.COMResultSet.y">
+<code class="sig-name descname">y</code><a class="headerlink" href="#libertem.analysis.com.COMResultSet.y" title="Permalink to this definition">¶</a></dt>
+<dd><p>Y component of the center of mass shift</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult">libertem.analysis.base.AnalysisResult</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="libertem.analysis.com.COMResultSet.x_real">
+<code class="sig-name descname">x_real</code><a class="headerlink" href="#libertem.analysis.com.COMResultSet.x_real" title="Permalink to this definition">¶</a></dt>
+<dd><p>Real part of the x component of the center of mass shift (complex dataset only)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult">libertem.analysis.base.AnalysisResult</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="libertem.analysis.com.COMResultSet.y_real">
+<code class="sig-name descname">y_real</code><a class="headerlink" href="#libertem.analysis.com.COMResultSet.y_real" title="Permalink to this definition">¶</a></dt>
+<dd><p>Real part of y component of the center of mass shift (complex dataset only)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult">libertem.analysis.base.AnalysisResult</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="libertem.analysis.com.COMResultSet.x_imag">
+<code class="sig-name descname">x_imag</code><a class="headerlink" href="#libertem.analysis.com.COMResultSet.x_imag" title="Permalink to this definition">¶</a></dt>
+<dd><p>Imaginary part of the x component of the center of mass shift (complex dataset only)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult">libertem.analysis.base.AnalysisResult</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="libertem.analysis.com.COMResultSet.y_imag">
+<code class="sig-name descname">y_imag</code><a class="headerlink" href="#libertem.analysis.com.COMResultSet.y_imag" title="Permalink to this definition">¶</a></dt>
+<dd><p>Imaginary part of y component of the center of mass shift (complex dataset only)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult">libertem.analysis.base.AnalysisResult</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-libertem.analysis.sum"></span><dl class="class">
+<dt id="libertem.analysis.sum.SumResultSet">
+<em class="property">class </em><code class="sig-prename descclassname">libertem.analysis.sum.</code><code class="sig-name descname">SumResultSet</code><span class="sig-paren">(</span><em class="sig-param">results</em>, <em class="sig-param">raw_results=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/analysis/sum.html#SumResultSet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.analysis.sum.SumResultSet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Running a <code class="xref py py-class docutils literal notranslate"><span class="pre">SumAnalysis</span></code> via <a class="reference internal" href="#libertem.api.Context.run" title="libertem.api.Context.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">libertem.api.Context.run()</span></code></a>
+returns an instance of this class.</p>
+<p>If the dataset contains complex numbers, the regular result attribute carries the
+absolute value of the result and additional attributes with real part, imaginary part,
+phase and full complex result are available.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">New in version 0.3.0.</span></p>
+</div>
+<dl class="attribute">
+<dt id="libertem.analysis.sum.SumResultSet.intensity">
+<code class="sig-name descname">intensity</code><a class="headerlink" href="#libertem.analysis.sum.SumResultSet.intensity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sum of all detector frames along the navigation dimension,
+preserving the signal dimension. Absolute value of the sum if the dataset
+contains complex numbers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult">libertem.analysis.base.AnalysisResult</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="libertem.analysis.sum.SumResultSet.intensity_real">
+<code class="sig-name descname">intensity_real</code><a class="headerlink" href="#libertem.analysis.sum.SumResultSet.intensity_real" title="Permalink to this definition">¶</a></dt>
+<dd><p>Real part of the sum of all detector frames along the navigation dimension,
+preserving the signal dimension. This is only available if the dataset
+contains complex numbers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult">libertem.analysis.base.AnalysisResult</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="libertem.analysis.sum.SumResultSet.intensity_imag">
+<code class="sig-name descname">intensity_imag</code><a class="headerlink" href="#libertem.analysis.sum.SumResultSet.intensity_imag" title="Permalink to this definition">¶</a></dt>
+<dd><p>Imaginary part of the sum of all detector frames along the navigation dimension,
+preserving the signal dimension. This is only available if the dataset
+contains complex numbers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult">libertem.analysis.base.AnalysisResult</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="libertem.analysis.sum.SumResultSet.intensity_angle">
+<code class="sig-name descname">intensity_angle</code><a class="headerlink" href="#libertem.analysis.sum.SumResultSet.intensity_angle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Phase angle of the sum of all detector frames along the navigation dimension,
+preserving the signal dimension. This is only available if the dataset
+contains complex numbers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult">libertem.analysis.base.AnalysisResult</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="libertem.analysis.sum.SumResultSet.intensity_complex">
+<code class="sig-name descname">intensity_complex</code><a class="headerlink" href="#libertem.analysis.sum.SumResultSet.intensity_complex" title="Permalink to this definition">¶</a></dt>
+<dd><p>Complex result of the sum of all detector frames along the navigation dimension,
+preserving the signal dimension. This is only available if the dataset
+contains complex numbers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult">libertem.analysis.base.AnalysisResult</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-libertem.analysis.raw"></span><dl class="class">
+<dt id="libertem.analysis.raw.PickResultSet">
+<em class="property">class </em><code class="sig-prename descclassname">libertem.analysis.raw.</code><code class="sig-name descname">PickResultSet</code><span class="sig-paren">(</span><em class="sig-param">results</em>, <em class="sig-param">raw_results=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/analysis/raw.html#PickResultSet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.analysis.raw.PickResultSet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Running a <code class="xref py py-class docutils literal notranslate"><span class="pre">PickFrameAnalysis</span></code> via <a class="reference internal" href="#libertem.api.Context.run" title="libertem.api.Context.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">libertem.api.Context.run()</span></code></a>
+returns an instance of this class.</p>
+<p>If the dataset contains complex numbers, the regular result attribute carries the
+absolute value of the result and additional attributes with real part, imaginary part,
+phase and full complex result are available.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">New in version 0.3.0.</span></p>
+</div>
+<dl class="attribute">
+<dt id="libertem.analysis.raw.PickResultSet.intensity">
+<code class="sig-name descname">intensity</code><a class="headerlink" href="#libertem.analysis.raw.PickResultSet.intensity" title="Permalink to this definition">¶</a></dt>
+<dd><p>The specified detector frame. Absolute value if the dataset
+contains complex numbers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult">libertem.analysis.base.AnalysisResult</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="libertem.analysis.raw.PickResultSet.intensity_real">
+<code class="sig-name descname">intensity_real</code><a class="headerlink" href="#libertem.analysis.raw.PickResultSet.intensity_real" title="Permalink to this definition">¶</a></dt>
+<dd><p>Real part of the specified detector frame. This is only available if the dataset
+contains complex numbers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult">libertem.analysis.base.AnalysisResult</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="libertem.analysis.raw.PickResultSet.intensity_imag">
+<code class="sig-name descname">intensity_imag</code><a class="headerlink" href="#libertem.analysis.raw.PickResultSet.intensity_imag" title="Permalink to this definition">¶</a></dt>
+<dd><p>Imaginary part of the specified detector frame. This is only available if the dataset
+contains complex numbers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult">libertem.analysis.base.AnalysisResult</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="libertem.analysis.raw.PickResultSet.intensity_angle">
+<code class="sig-name descname">intensity_angle</code><a class="headerlink" href="#libertem.analysis.raw.PickResultSet.intensity_angle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Phase angle of the specified detector frame. This is only available if the dataset
+contains complex numbers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult">libertem.analysis.base.AnalysisResult</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="libertem.analysis.raw.PickResultSet.intensity_complex">
+<code class="sig-name descname">intensity_complex</code><a class="headerlink" href="#libertem.analysis.raw.PickResultSet.intensity_complex" title="Permalink to this definition">¶</a></dt>
+<dd><p>Complex result of the specified detector frame. This is only available if the dataset
+contains complex numbers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult">libertem.analysis.base.AnalysisResult</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html">GUI usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concepts.html">Concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../formats.html">Loading data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../udf.html">User-defined functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../applications.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../performance.html">Performance</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../debugging.html">Debugging</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">LiberTEM Context API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="udf.html">UDF API reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataset.html">Data Set API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="application.html">Application-specific API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="masks.html">Mask creation and manipulation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="internals.html">Internal API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dask.html">Dask API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cluster-ds.html">Cluster data set</a></li>
+<li class="toctree-l2"><a class="reference internal" href="caching.html">Distributed caching layer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#indices-and-tables">Indices and tables</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tips.html">Tips and tricks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../why_python.html">Why Python?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../gsoc.html">GSoC 2019 ideas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../authorship.html">Authorship policy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../citing.html">Citing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledgments.html">Acknowledgments</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Reference</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Reference</a></li>
+      <li>Next: <a href="udf.html" title="next chapter">UDF API reference</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, LiberTEM Authors.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/reference/api.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,256 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Amorphous materials reference &#8212; LiberTEM 0.4.0.dev0 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    <link rel="shortcut icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Correlation-based peak finding and strain mapping reference" href="strain.html" />
+    <link rel="prev" title="Application-specific API" href="../application.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="amorphous-materials-reference">
+<h1>Amorphous materials reference<a class="headerlink" href="#amorphous-materials-reference" title="Permalink to this headline">¶</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>See <a class="reference internal" href="../../app/amorphous.html#amorphous-app"><span class="std std-ref">Amorphous materials</span></a> for an overview and description of the amorphous applications.</p>
+</div>
+<div class="section" id="fluctuation-em">
+<span id="fem-api"></span><h2>Fluctuation EM<a class="headerlink" href="#fluctuation-em" title="Permalink to this headline">¶</a></h2>
+<p>This module contains the UDF for applying FEM to a single ring (mostly useful for interactive use).</p>
+<span class="target" id="module-libertem.udf.FEM"></span><dl class="class">
+<dt id="libertem.udf.FEM.FEMUDF">
+<em class="property">class </em><code class="sig-prename descclassname">libertem.udf.FEM.</code><code class="sig-name descname">FEMUDF</code><span class="sig-paren">(</span><em class="sig-param">center</em>, <em class="sig-param">rad_in</em>, <em class="sig-param">rad_out</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/libertem/udf/FEM.html#FEMUDF"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.udf.FEM.FEMUDF" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform Fluctuation EM <a class="bibtex reference internal" href="../../index.html#gibson1997" id="id1">[GT97]</a></p>
+<p>This UDF calculates the standard deviation within a ring around the zero order diffraction peak.</p>
+<dl class="method">
+<dt id="libertem.udf.FEM.FEMUDF.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">center</em>, <em class="sig-param">rad_in</em>, <em class="sig-param">rad_out</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/libertem/udf/FEM.html#FEMUDF.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.udf.FEM.FEMUDF.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">fem_udf</span> <span class="o">=</span> <span class="n">FEMUDF</span><span class="p">(</span><span class="n">center</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">),</span> <span class="n">rad_in</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">rad_out</span><span class="o">=</span><span class="mi">6</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">run_udf</span><span class="p">(</span><span class="n">dataset</span><span class="o">=</span><span class="n">dataset</span><span class="p">,</span> <span class="n">udf</span><span class="o">=</span><span class="n">fem_udf</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">&quot;intensity&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">(16, 16)</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>center</strong> (<em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a><em>]</em>) – (x, y) - coordinates of a center of a ring for a masking region of interest to
+calculate SD</p></li>
+<li><p><strong>rad_in</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Inner radius of a ring mask</p></li>
+<li><p><strong>rad_out</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Outer radius of a ring mask</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="libertem.udf.FEM.run_fem">
+<code class="sig-prename descclassname">libertem.udf.FEM.</code><code class="sig-name descname">run_fem</code><span class="sig-paren">(</span><em class="sig-param">ctx</em>, <em class="sig-param">dataset</em>, <em class="sig-param">center</em>, <em class="sig-param">rad_in</em>, <em class="sig-param">rad_out</em>, <em class="sig-param">roi=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/libertem/udf/FEM.html#run_fem"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.udf.FEM.run_fem" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a standard deviation(SD) value for each frame of pixels which belong to ring mask.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ctx</strong> (<a class="reference internal" href="../api.html#libertem.api.Context" title="libertem.api.Context"><em>Context</em></a>) – Context class that contains methods for loading datasets,
+creating jobs on them and running them</p></li>
+<li><p><strong>dataset</strong> (<a class="reference internal" href="../dataset.html#libertem.io.dataset.base.DataSet" title="libertem.io.dataset.base.DataSet"><em>DataSet</em></a>) – A dataset with 1- or 2-D scan dimensions and 2-D frame dimensions</p></li>
+<li><p><strong>center</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#tuple" title="(in Python v3.7)"><em>tuple</em></a>) – (x,y) - coordinates of a center of a ring for a masking region of interest to calculate SD</p></li>
+<li><p><strong>rad_in</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Inner radius of a ring mask</p></li>
+<li><p><strong>rad_out</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Outer radius of a ring mask</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>pass_results</strong> – Returns a standard deviation(SD) value for each frame of pixels which belong to ring mask.
+To return 2-D array use pass_results[‘intensity’].data</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#dict" title="(in Python v3.7)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="radial-fourier-analysis">
+<span id="radial-fourier-api"></span><h2>Radial Fourier Analysis<a class="headerlink" href="#radial-fourier-analysis" title="Permalink to this headline">¶</a></h2>
+<p>This module contains the radial fourier series analysis, for analysing frequencies and
+symmetries of diffraction patterns.</p>
+<span class="target" id="module-libertem.analysis.radialfourier"></span><dl class="class">
+<dt id="libertem.analysis.radialfourier.RadialFourierResultSet">
+<em class="property">class </em><code class="sig-prename descclassname">libertem.analysis.radialfourier.</code><code class="sig-name descname">RadialFourierResultSet</code><span class="sig-paren">(</span><em class="sig-param">results</em>, <em class="sig-param">raw_results=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/libertem/analysis/radialfourier.html#RadialFourierResultSet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.analysis.radialfourier.RadialFourierResultSet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Result set of a <code class="xref py py-class docutils literal notranslate"><span class="pre">RadialFourierAnalysis</span></code></p>
+<p>Running a <code class="xref py py-class docutils literal notranslate"><span class="pre">RadialFourierAnalysis</span></code> via <a class="reference internal" href="../api.html#libertem.api.Context.run" title="libertem.api.Context.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">libertem.api.Context.run()</span></code></a> on a dataset
+returns an instance of this class. It contains the Fourier coefficients
+for each bin. See <a class="reference internal" href="../api.html#libertem.api.Context.create_radial_fourier_analysis" title="libertem.api.Context.create_radial_fourier_analysis"><code class="xref py py-meth docutils literal notranslate"><span class="pre">libertem.api.Context.create_radial_fourier_analysis()</span></code></a> for
+available parameters and <a class="reference internal" href="../../app/amorphous.html#radialfourier-app"><span class="std std-ref">Radial Fourier Series</span></a> for a description of the application!</p>
+<div class="versionadded">
+<p><span class="versionmodified added">New in version 0.3.0.</span></p>
+</div>
+<dl class="attribute">
+<dt>
+<code class="sig-name descname">dominant_0, absolute_0_0, absolute_0_1, ..., absolute_0_&lt;max_order&gt;,    phase_0_0, ..., phase_0_&lt;max_order&gt;,    complex_0_0, ..., complex_0_&lt;max_order&gt;;    dominant_1, absolute_1_0, ..., complex_1_&lt;max_order&gt;;    dominant_&lt;nbins-1&gt;, ..., complex_&lt;nbins-1&gt;_&lt;max_order&gt;</code></dt>
+<dd><p>Results for each bin: dominant Fourier coefficient (indicates symmetry),
+absolute values of each Fourier coefficient,
+phase values of each Fourier coefficient, complex values of each Fourier coefficient.
+The results have the shape of the navigation dimension.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="../api.html#libertem.analysis.base.AnalysisResult" title="libertem.analysis.base.AnalysisResult">libertem.analysis.base.AnalysisResult</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="libertem.analysis.radialfourier.RadialFourierResultSet.raw_results">
+<code class="sig-name descname">raw_results</code><a class="headerlink" href="#libertem.analysis.radialfourier.RadialFourierResultSet.raw_results" title="Permalink to this definition">¶</a></dt>
+<dd><p>Complex numbers, shape (&lt;n_bins&gt;, &lt;max_order + 1&gt;, *(&lt;ds.shape.nav&gt;))</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../../index.html">
+    <img class="logo" src="../../_static/logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">GUI usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../concepts.html">Concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../formats.html">Loading data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../udf.html">User-defined functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../applications.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../performance.html">Performance</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../debugging.html">Debugging</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../api.html">LiberTEM Context API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../udf.html">UDF API reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dataset.html">Data Set API</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../application.html">Application-specific API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../masks.html">Mask creation and manipulation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../internals.html">Internal API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dask.html">Dask API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../cluster-ds.html">Cluster data set</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../caching.html">Distributed caching layer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#indices-and-tables">Indices and tables</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tips.html">Tips and tricks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../why_python.html">Why Python?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../gsoc.html">GSoC 2019 ideas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../authorship.html">Authorship policy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../citing.html">Citing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../acknowledgments.html">Acknowledgments</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Reference</a><ul>
+  <li><a href="../application.html">Application-specific API</a><ul>
+      <li>Previous: <a href="../application.html" title="previous chapter">Application-specific API</a></li>
+      <li>Next: <a href="strain.html" title="next chapter">Correlation-based peak finding and strain mapping reference</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, LiberTEM Authors.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../../_sources/reference/app/amorphous.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

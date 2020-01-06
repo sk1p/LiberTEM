@@ -1,0 +1,215 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Strain mapping &#8212; LiberTEM 0.4.0.dev0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    <link rel="shortcut icon" href="../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Strain map of a transistor" href="strainmap-SiGe.html" />
+    <link rel="prev" title="Radial Fourier Analysis scripting example" href="radialfourier.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="strain-mapping">
+<span id="id1"></span><h1>Strain mapping<a class="headerlink" href="#strain-mapping" title="Permalink to this headline">¶</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>See <a class="reference internal" href="../reference/app/strain.html#blobfinder-api"><span class="std std-ref">blobfinder API reference</span></a> and <a class="reference internal" href="../reference/app/strain.html#matching-api"><span class="std std-ref">matching API reference</span></a> for API references</p>
+</div>
+<p>LiberTEM can evaluate the position of convergent beam electron diffraction disks or precession electron diffraction peaks to generate input data for strain maps in three automated steps:</p>
+<ol class="arabic simple">
+<li><p>Identify peaks using <code class="xref py py-meth docutils literal notranslate"><span class="pre">get_peaks()</span></code></p></li>
+<li><p>Extract a probable lattice from the peak positions using <a class="reference internal" href="../reference/app/strain.html#libertem.analysis.fullmatch.FullMatcher.full_match" title="libertem.analysis.fullmatch.FullMatcher.full_match"><code class="xref py py-meth docutils literal notranslate"><span class="pre">full_match()</span></code></a></p></li>
+<li><p>Refine the lattice for each frame using <code class="xref py py-meth docutils literal notranslate"><span class="pre">run_refine()</span></code></p></li>
+</ol>
+<p>The algorithms are currently focused on the initial data extraction step, i.e. they work purely in pixels in frame coordinates and derive only parameters for each individual peak and for a 2D lattice in the detector reference frame. They don’t try to index peaks in crystallographic indices of the sample or to derive a 3D orientation. However, they can extract relevant input data such as peak positions and intensities very efficiently for such subsequent processing steps.</p>
+<p>The algorithms are designed to be robust against intensity variations across a diffraction disk, between disks and between frames by calculating a correlation for each potential peak position, measuring the quality of each correlation and using the quality and position with subpixel refinement in a weighted least square optimization to derive the parameters for each frame. At the same time, the algorithms are optimized for efficiency and scalability so that they generate a full strain map on 32 GB of raw data within a few minutes on a suitable workstation and scale on a cluster, making full use of LiberTEM’s distributed processing capabilities.</p>
+<p>Relevant input parameters are</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt>Matching template</dt><dd><ul>
+<li><p>Instance of <code class="xref py py-class docutils literal notranslate"><span class="pre">MatchPattern</span></code></p></li>
+<li><p>Available options are <code class="xref py py-class docutils literal notranslate"><span class="pre">RadialGradient</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">BackgroundSubtraction</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">RadialGradientBackgroundSubtraction</span></code>, and <code class="xref py py-class docutils literal notranslate"><span class="pre">UserTemplate</span></code></p></li>
+<li><p><code class="code docutils literal notranslate"><span class="pre">search</span></code> parameter to define the search area around the expected position</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Matcher: Instance of <code class="xref py py-class docutils literal notranslate"><span class="pre">Matcher</span></code>.</dt><dd><ul>
+<li><p><code class="code docutils literal notranslate"><span class="pre">tolerance</span></code> for position errors in the matching routine</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p>Number of disks to find in the initial step</p></li>
+</ul>
+<p>This example shows a typical strain map of a transistor with strained silicon.</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="strainmap-SiGe.html">Strain map of a transistor</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="strainmap-SiGe.html#Opening-files-and-determining-basic-parameters">Opening files and determining basic parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="strainmap-SiGe.html#Logsum-frame">Logsum frame</a></li>
+<li class="toctree-l2"><a class="reference internal" href="strainmap-SiGe.html#Determine-base-lattice">Determine base lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="strainmap-SiGe.html#Adjust-matching-template">Adjust matching template</a></li>
+<li class="toctree-l2"><a class="reference internal" href="strainmap-SiGe.html#Refine-the-lattice">Refine the lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="strainmap-SiGe.html#Post-processing-and-visualization">Post-processing and visualization</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="strain-map-of-polycrystalline-materials">
+<h2>Strain map of polycrystalline materials<a class="headerlink" href="#strain-map-of-polycrystalline-materials" title="Permalink to this headline">¶</a></h2>
+<p>LiberTEM allows to segment a scan into regions of interest to process grains with different orientations and lattice parameters separately. This example uses clustering of a feature vector to process a polycrystalline sample in a fully automated fashion.</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="strainmap-poly.html">Refine lattice parameters on polycrystalline sample</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="strainmap-poly.html#Find-the-zero-order-peak">Find the zero order peak</a></li>
+<li class="toctree-l2"><a class="reference internal" href="strainmap-poly.html#Generate-a-feature-vector">Generate a feature vector</a></li>
+<li class="toctree-l2"><a class="reference internal" href="strainmap-poly.html#Clustering">Clustering</a></li>
+<li class="toctree-l2"><a class="reference internal" href="strainmap-poly.html#Determine-parameters-individually-for-each-cluster">Determine parameters individually for each cluster</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="strainmap-poly.html#Refine-lattice-parameters-within-each-cluster">Refine lattice parameters within each cluster</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="strainmap-poly.html#Assembling-the-complete-result">Assembling the complete result</a></li>
+<li class="toctree-l2"><a class="reference internal" href="strainmap-poly.html#Result-visualization">Result visualization</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="acknowledgments">
+<h2>Acknowledgments<a class="headerlink" href="#acknowledgments" title="Permalink to this headline">¶</a></h2>
+<p>Karina Ruzaeva implemented the correlation routines and introduced feature vectors and clustering. Alexander Clausen developed the architecture, in particular the interface for user-defined functions that allows to implement such complex processing schemes on a distributed system easily and at the same time with optimal performance. Dieter Weber implemented the grid matching and refinement code.</p>
+<p class="rubric">Reference</p>
+<p>See <a class="reference internal" href="../reference/app/strain.html#blobfinder-api"><span class="std std-ref">blobfinder API reference</span></a> and <a class="reference internal" href="../reference/app/strain.html#matching-api"><span class="std std-ref">matching API reference</span></a> for details!</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html">GUI usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concepts.html">Concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../formats.html">Loading data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../udf.html">User-defined functions</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../applications.html">Applications</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="amorphous.html">Amorphous materials</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Strain mapping</a></li>
+<li class="toctree-l2"><a class="reference internal" href="phasechange.html">Phase-change materials</a></li>
+<li class="toctree-l2"><a class="reference internal" href="holography.html">Off-axis electron holography</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../performance.html">Performance</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../debugging.html">Debugging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/index.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tips.html">Tips and tricks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../why_python.html">Why Python?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../gsoc.html">GSoC 2019 ideas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../authorship.html">Authorship policy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../citing.html">Citing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledgments.html">Acknowledgments</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="../applications.html">Applications</a><ul>
+      <li>Previous: <a href="radialfourier.html" title="previous chapter">Radial Fourier Analysis scripting example</a></li>
+      <li>Next: <a href="strainmap-SiGe.html" title="next chapter">Strain map of a transistor</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, LiberTEM Authors.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/app/strain.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

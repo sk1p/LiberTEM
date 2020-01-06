@@ -1,0 +1,1057 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>libertem.io.dataset.base &#8212; LiberTEM 0.4.0.dev0 documentation</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    <link rel="shortcut icon" href="../../../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for libertem.io.dataset.base</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">itertools</span>
+
+<span class="kn">import</span> <span class="nn">jsonschema</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">libertem.io.utils</span> <span class="kn">import</span> <span class="n">get_partition_shape</span>
+<span class="kn">from</span> <span class="nn">libertem.common</span> <span class="kn">import</span> <span class="n">Slice</span><span class="p">,</span> <span class="n">Shape</span>
+<span class="kn">from</span> <span class="nn">libertem.common.buffers</span> <span class="kn">import</span> <span class="n">bytes_aligned</span><span class="p">,</span> <span class="n">zeros_aligned</span>
+
+
+<span class="k">def</span> <span class="nf">_roi_to_indices</span><span class="p">(</span><span class="n">roi</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    helper function to calculate indices from roi mask</span>
+
+<span class="sd">    roi : numpy.ndarray of type bool, matching the navigation shape of the dataset</span>
+
+<span class="sd">    start : int</span>
+<span class="sd">        start frame index, relative to dataset start</span>
+<span class="sd">        can for example be the start frame index of a partition</span>
+
+<span class="sd">    stop : int</span>
+<span class="sd">        stop frame index, relative to dataset start</span>
+<span class="sd">        can for example be the stop frame index of a partition</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">roi</span> <span class="o">=</span> <span class="n">roi</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,))</span>
+    <span class="n">frames_in_roi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">count_nonzero</span><span class="p">(</span><span class="n">roi</span><span class="p">)</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">flag</span><span class="p">,</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">roi</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">],</span> <span class="nb">range</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">flag</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="n">idx</span>
+            <span class="c1"># early exit: we know we don&#39;t have more frames in the roi</span>
+            <span class="n">total</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">total</span> <span class="o">==</span> <span class="n">frames_in_roi</span><span class="p">:</span>
+                <span class="k">break</span>
+
+
+<div class="viewcode-block" id="IOCaps"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.IOCaps">[docs]</a><span class="k">class</span> <span class="nc">IOCaps</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    I/O capabilities for a dataset (may depend on dataset parameters and concrete format)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ALL_CAPS</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;MMAP&quot;</span><span class="p">,</span>             <span class="c1"># .mmap is implemented on the file subclass</span>
+        <span class="s2">&quot;DIRECT&quot;</span><span class="p">,</span>           <span class="c1"># supports direct reading</span>
+        <span class="s2">&quot;FULL_FRAMES&quot;</span><span class="p">,</span>      <span class="c1"># can read full frames</span>
+        <span class="s2">&quot;SUBFRAME_TILES&quot;</span><span class="p">,</span>   <span class="c1"># can read tiles that slice frames into pieces</span>
+        <span class="s2">&quot;FRAME_CROPS&quot;</span><span class="p">,</span>      <span class="c1"># can efficiently crop on signal dimension without needing mmap</span>
+    <span class="p">}</span>
+
+<div class="viewcode-block" id="IOCaps.__init__"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.IOCaps.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">caps</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        create new capability set</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">caps</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">caps</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">cap</span> <span class="ow">in</span> <span class="n">caps</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_validate_cap</span><span class="p">(</span><span class="n">cap</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_caps</span> <span class="o">=</span> <span class="n">caps</span></div>
+
+    <span class="k">def</span> <span class="nf">_validate_cap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cap</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">cap</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ALL_CAPS</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;invalid I/O capability: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">cap</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__contains__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cap</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">cap</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_caps</span>
+
+    <span class="k">def</span> <span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;caps&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_caps</span><span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_caps</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s2">&quot;caps&quot;</span><span class="p">]</span>
+
+<div class="viewcode-block" id="IOCaps.add"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.IOCaps.add">[docs]</a>    <span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">caps</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">cap</span> <span class="ow">in</span> <span class="n">caps</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_validate_cap</span><span class="p">(</span><span class="n">cap</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_caps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_caps</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">caps</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="IOCaps.remove"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.IOCaps.remove">[docs]</a>    <span class="k">def</span> <span class="nf">remove</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">caps</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">cap</span> <span class="ow">in</span> <span class="n">caps</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_validate_cap</span><span class="p">(</span><span class="n">cap</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_caps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_caps</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">caps</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="DataSetException"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.DataSetException">[docs]</a><span class="k">class</span> <span class="nc">DataSetException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="FileTree"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.FileTree">[docs]</a><span class="k">class</span> <span class="nc">FileTree</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="FileTree.__init__"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.FileTree.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">low</span><span class="p">,</span> <span class="n">high</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">low</span> <span class="o">=</span> <span class="n">low</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">high</span> <span class="o">=</span> <span class="n">high</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">idx</span> <span class="o">=</span> <span class="n">idx</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">left</span> <span class="o">=</span> <span class="n">left</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">right</span> <span class="o">=</span> <span class="n">right</span></div>
+
+<div class="viewcode-block" id="FileTree.make"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.FileTree.make">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">make</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">files</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        build a balanced binary tree by bisecting the files list</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">_make</span><span class="p">(</span><span class="n">files</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">None</span>
+            <span class="n">mid</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span>
+            <span class="n">idx</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">files</span><span class="p">[</span><span class="n">mid</span><span class="p">]</span>
+
+            <span class="k">return</span> <span class="n">FileTree</span><span class="p">(</span>
+                <span class="n">low</span><span class="o">=</span><span class="n">value</span><span class="o">.</span><span class="n">start_idx</span><span class="p">,</span>
+                <span class="n">high</span><span class="o">=</span><span class="n">value</span><span class="o">.</span><span class="n">end_idx</span><span class="p">,</span>
+                <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">,</span>
+                <span class="n">idx</span><span class="o">=</span><span class="n">idx</span><span class="p">,</span>
+                <span class="n">left</span><span class="o">=</span><span class="n">_make</span><span class="p">(</span><span class="n">files</span><span class="p">[:</span><span class="n">mid</span><span class="p">]),</span>
+                <span class="n">right</span><span class="o">=</span><span class="n">_make</span><span class="p">(</span><span class="n">files</span><span class="p">[</span><span class="n">mid</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:]),</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">_make</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="n">files</span><span class="p">)))</span></div>
+
+<div class="viewcode-block" id="FileTree.search_start"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.FileTree.search_start">[docs]</a>    <span class="k">def</span> <span class="nf">search_start</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        search a node that has start_idx &lt;= value &amp;&amp; end_idx &gt; value</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">low</span> <span class="o">&lt;=</span> <span class="n">value</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">high</span> <span class="o">&gt;</span> <span class="n">value</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">idx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">low</span> <span class="o">&gt;</span> <span class="n">value</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">left</span><span class="o">.</span><span class="n">search_start</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">right</span><span class="o">.</span><span class="n">search_start</span><span class="p">(</span><span class="n">value</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="DataSet"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.DataSet">[docs]</a><span class="k">class</span> <span class="nc">DataSet</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="DataSet.__init__"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.DataSet.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cores</span> <span class="o">=</span> <span class="mi">1</span></div>
+
+<div class="viewcode-block" id="DataSet.initialize"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.DataSet.initialize">[docs]</a>    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">executor</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Perform possibly expensive initialization, like pre-loading metadata.</span>
+
+<span class="sd">        This is run on the master node, but can execute parts on workers, for example</span>
+<span class="sd">        if they need to access the data stored on worker nodes, using the passed executor</span>
+<span class="sd">        instance.</span>
+
+<span class="sd">        If you need the executor around for later operations, for example when creating</span>
+<span class="sd">        the partitioning, save a reference here!</span>
+
+<span class="sd">        Should return the possibly modified `DataSet` instance (if a method running</span>
+<span class="sd">        on a worker is changing `self`, these changes won&#39;t automatically be transferred back</span>
+<span class="sd">        to the master node)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DataSet.set_num_cores"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.DataSet.set_num_cores">[docs]</a>    <span class="k">def</span> <span class="nf">set_num_cores</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cores</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cores</span> <span class="o">=</span> <span class="n">cores</span></div>
+
+<div class="viewcode-block" id="DataSet.get_partitions"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.DataSet.get_partitions">[docs]</a>    <span class="k">def</span> <span class="nf">get_partitions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return a generator over all Partitions in this DataSet. Should only</span>
+<span class="sd">        be called on the master node.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">dtype</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        the destination data type</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">raw_dtype</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        the underlying data type</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">shape</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The shape of the DataSet, as it makes sense for the application domain</span>
+<span class="sd">        (for example, 4D for pixelated STEM)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+<div class="viewcode-block" id="DataSet.check_valid"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.DataSet.check_valid">[docs]</a>    <span class="k">def</span> <span class="nf">check_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        check validity of the DataSet. this will be executed (after initialize) on a worker node.</span>
+<span class="sd">        should raise DataSetException in case of errors, return True otherwise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DataSet.detect_params"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.DataSet.detect_params">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">detect_params</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">executor</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Guess if path can be opened using this DataSet implementation and</span>
+<span class="sd">        detect parameters.</span>
+
+<span class="sd">        returns dict of detected parameters if path matches this dataset type,</span>
+<span class="sd">        returns False if path is most likely not of a matching type.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># FIXME: return hints for the user and additional values,</span>
+        <span class="c1"># for example number of signal elements</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DataSet.get_msg_converter"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.DataSet.get_msg_converter">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">get_msg_converter</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">diagnostics</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Diagnistics common for all DataSet implementations</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_partitions</span><span class="p">())</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_diagnostics</span><span class="p">()</span> <span class="o">+</span> <span class="p">[</span>
+            <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Partition shape&quot;</span><span class="p">,</span>
+             <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">shape</span><span class="p">)},</span>
+
+            <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Number of partitions&quot;</span><span class="p">,</span>
+             <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_partitions</span><span class="p">())))}</span>
+        <span class="p">]</span>
+
+<div class="viewcode-block" id="DataSet.get_diagnostics"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.DataSet.get_diagnostics">[docs]</a>    <span class="k">def</span> <span class="nf">get_diagnostics</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get relevant diagnostics for this dataset, as a list of</span>
+<span class="sd">        dicts with keys name, value, where value may be string or</span>
+<span class="sd">        a list of dicts itself. Subclasses should override this method.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[]</span></div>
+
+<div class="viewcode-block" id="DataSet.partition_shape"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.DataSet.partition_shape">[docs]</a>    <span class="k">def</span> <span class="nf">partition_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">datashape</span><span class="p">,</span> <span class="n">framesize</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="n">target_size</span><span class="p">,</span> <span class="n">min_num_partitions</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate partition shape for the given ``target_size``</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        datashape : (int, int, int, int)</span>
+<span class="sd">            size of the whole dataset</span>
+<span class="sd">        framesize : int</span>
+<span class="sd">            number of pixels per frame</span>
+<span class="sd">        dtype : numpy.dtype or str</span>
+<span class="sd">            data type of the dataset</span>
+<span class="sd">        target_size : int</span>
+<span class="sd">            target size in bytes - how large should each partition be?</span>
+<span class="sd">        min_num_partitions : int</span>
+<span class="sd">            minimum number of partitions desired. Defaults to the number of workers in the cluster.</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        (int, int, int, int)</span>
+<span class="sd">            the shape calculated from the given parameters</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">min_num_partitions</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">min_num_partitions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cores</span>
+        <span class="k">return</span> <span class="n">get_partition_shape</span><span class="p">(</span><span class="n">datashape</span><span class="p">,</span> <span class="n">framesize</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="n">target_size</span><span class="p">,</span>
+                                   <span class="n">min_num_partitions</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DataSet.get_cache_key"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.DataSet.get_cache_key">[docs]</a>    <span class="k">def</span> <span class="nf">get_cache_key</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div></div>
+
+
+<div class="viewcode-block" id="DataSetMeta"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.DataSetMeta">[docs]</a><span class="k">class</span> <span class="nc">DataSetMeta</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="DataSetMeta.__init__"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.DataSetMeta.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">raw_dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">iocaps</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="n">shape</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">raw_dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">raw_dtype</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">metadata</span>
+        <span class="k">if</span> <span class="n">iocaps</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">iocaps</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iocaps</span> <span class="o">=</span> <span class="n">IOCaps</span><span class="p">(</span><span class="n">iocaps</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">key</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="WritableDataSet"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.WritableDataSet">[docs]</a><span class="k">class</span> <span class="nc">WritableDataSet</span><span class="p">:</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="WritablePartition"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.WritablePartition">[docs]</a><span class="k">class</span> <span class="nc">WritablePartition</span><span class="p">:</span>
+<div class="viewcode-block" id="WritablePartition.get_write_handle"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.WritablePartition.get_write_handle">[docs]</a>    <span class="k">def</span> <span class="nf">get_write_handle</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="WritablePartition.delete"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.WritablePartition.delete">[docs]</a>    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div></div>
+
+
+<div class="viewcode-block" id="Partition"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.Partition">[docs]</a><span class="k">class</span> <span class="nc">Partition</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="Partition.__init__"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.Partition.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">meta</span><span class="p">,</span> <span class="n">partition_slice</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">meta</span> <span class="o">=</span> <span class="n">meta</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slice</span> <span class="o">=</span> <span class="n">partition_slice</span>
+        <span class="k">assert</span> <span class="n">partition_slice</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">nav</span><span class="o">.</span><span class="n">dims</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;nav dims should be flat&quot;</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">dtype</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">raw_dtype</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">shape</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        the shape of the partition; dimensionality depends on format</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">slice</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">flatten_nav</span><span class="p">()</span>
+
+<div class="viewcode-block" id="Partition.get_tiles"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.Partition.get_tiles">[docs]</a>    <span class="k">def</span> <span class="nf">get_tiles</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">crop_to</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">full_frames</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">mmap</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">dest_dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">,</span>
+                  <span class="n">roi</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">target_size</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return a generator over all DataTiles contained in this Partition.</span>
+
+<span class="sd">        Note</span>
+<span class="sd">        ----</span>
+<span class="sd">        The DataSet may reuse the internal buffer of a tile, so you should</span>
+<span class="sd">        directly process the tile and not accumulate a number of tiles and then work</span>
+<span class="sd">        on them.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        crop_to : Slice or None</span>
+<span class="sd">            crop to this slice. datasets may impose additional limits to the shape of the slice</span>
+
+<span class="sd">        full_frames : boolean, default False</span>
+<span class="sd">            always read full frames, not stacks of crops of frames</span>
+
+<span class="sd">        mmap : boolean, default False</span>
+<span class="sd">            enable mmap if possible (not guaranteed to be supported by dataset)</span>
+
+<span class="sd">        dest_dtype : numpy dtype</span>
+<span class="sd">            convert data to this dtype when reading</span>
+
+<span class="sd">        roi : numpy.ndarray</span>
+<span class="sd">            1d mask that matches the dataset navigation shape to limit the region to work on.</span>
+<span class="sd">            With a ROI, we yield tiles from a &quot;compressed&quot; navigation axis, relative to</span>
+<span class="sd">            the beginning of the dataset. Compressed means, only frames that have a 1</span>
+<span class="sd">            in the ROI are considered, and the resulting tile slices are from a coordinate</span>
+<span class="sd">            system that has the shape `(np.count_nonzero(roi),)`.</span>
+<span class="sd">        target_size : int</span>
+<span class="sd">            Target size for each tile in bytes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Partition.get_macrotile"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.Partition.get_macrotile">[docs]</a>    <span class="k">def</span> <span class="nf">get_macrotile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mmap</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">dest_dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">,</span> <span class="n">roi</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Return a single tile for the entire partition.</span>
+
+<span class="sd">        This is useful to support process_partiton() in UDFs and to construct dask arrays</span>
+<span class="sd">        from datasets.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">next</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_tiles</span><span class="p">(</span>
+                <span class="n">full_frames</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">mmap</span><span class="o">=</span><span class="n">mmap</span><span class="p">,</span> <span class="n">dest_dtype</span><span class="o">=</span><span class="n">dest_dtype</span><span class="p">,</span> <span class="n">roi</span><span class="o">=</span><span class="n">roi</span><span class="p">,</span>
+                <span class="n">target_size</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">)</span>
+            <span class="p">))</span>
+        <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
+            <span class="n">tile_slice</span> <span class="o">=</span> <span class="n">Slice</span><span class="p">(</span>
+                <span class="n">origin</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">slice</span><span class="o">.</span><span class="n">origin</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                <span class="n">shape</span><span class="o">=</span><span class="n">Shape</span><span class="p">((</span><span class="mi">0</span><span class="p">,)</span> <span class="o">+</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">slice</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">sig</span><span class="p">),</span> <span class="n">sig_dims</span><span class="o">=</span><span class="mi">2</span><span class="p">),</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">DataTile</span><span class="p">(</span>
+                <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">tile_slice</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dest_dtype</span><span class="p">),</span>
+                <span class="n">tile_slice</span><span class="o">=</span><span class="n">tile_slice</span>
+            <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Partition.get_locations"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.Partition.get_locations">[docs]</a>    <span class="k">def</span> <span class="nf">get_locations</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Allow using any worker by default</span>
+        <span class="k">return</span> <span class="kc">None</span></div></div>
+
+
+<div class="viewcode-block" id="DataTile"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.DataTile">[docs]</a><span class="k">class</span> <span class="nc">DataTile</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="s2">&quot;tile_slice&quot;</span><span class="p">]</span>
+
+<div class="viewcode-block" id="DataTile.__init__"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.DataTile.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">tile_slice</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        A unit of data that can easily be processed at once, for example using</span>
+<span class="sd">        one of the BLAS routines. For large frames, this may be a stack of sub-frame</span>
+<span class="sd">        tiles.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        tile_slice : Slice</span>
+<span class="sd">            the global coordinates for this data tile</span>
+
+<span class="sd">        data : numpy.ndarray</span>
+<span class="sd">            the data corresponding to the origin/shape of tile_slice</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tile_slice</span> <span class="o">=</span> <span class="n">tile_slice</span>
+        <span class="k">assert</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">tile_slice</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="s2">&quot;to_tuple&quot;</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">tile_slice</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">nav</span><span class="o">.</span><span class="n">dims</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;DataTile should have flat nav&quot;</span>
+        <span class="k">assert</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">tile_slice</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span>\
+            <span class="s2">&quot;shape mismatch: data=</span><span class="si">%s</span><span class="s2">, tile_slice=</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">tile_slice</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DataTile.astype"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.DataTile.astype">[docs]</a>    <span class="k">def</span> <span class="nf">astype</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dtype</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">DataTile</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">),</span> <span class="n">tile_slice</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tile_slice</span><span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">flat_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Flatten the data.</span>
+
+<span class="sd">        The result is a 2D array where each row contains pixel data</span>
+<span class="sd">        from a single frame. It is just a reshape, so it is a view into</span>
+<span class="sd">        the original data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tile_slice</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">tileshape</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">shape</span><span class="o">.</span><span class="n">nav</span><span class="o">.</span><span class="n">size</span><span class="p">,</span>    <span class="c1"># stackheight, number of frames we process at once</span>
+            <span class="n">shape</span><span class="o">.</span><span class="n">sig</span><span class="o">.</span><span class="n">size</span><span class="p">,</span>    <span class="c1"># framesize, number of pixels per tile</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">tileshape</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;&lt;DataTile </span><span class="si">%r</span><span class="s2">&gt;&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">tile_slice</span>
+
+    <span class="k">def</span> <span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="n">k</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__slots__</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="File3D"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.File3D">[docs]</a><span class="k">class</span> <span class="nc">File3D</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="File3D.__init__"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.File3D.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_buffers</span> <span class="o">=</span> <span class="p">{}</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">num_frames</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        number of frames contained in this file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">start_idx</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        global start index of frames contained in this file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">end_idx</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_idx</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_frames</span>
+
+<div class="viewcode-block" id="File3D.readinto"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.File3D.readinto">[docs]</a>    <span class="k">def</span> <span class="nf">readinto</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">crop_to</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Read a number of frames into an existing buffer</span>
+
+<span class="sd">        Note: this method is not thread safe!</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        start : int</span>
+<span class="sd">            file-local index of first frame to read</span>
+<span class="sd">        stop : int</span>
+<span class="sd">            file-local end index</span>
+<span class="sd">        out : buffer</span>
+<span class="sd">            output buffer that should fit `stop - start` frames</span>
+<span class="sd">        crop_to : Slice</span>
+<span class="sd">            crop to the signal part of this Slice</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="File3D.mmap"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.File3D.mmap">[docs]</a>    <span class="k">def</span> <span class="nf">mmap</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return a memory mapped array of this file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="File3D.open"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.File3D.open">[docs]</a>    <span class="k">def</span> <span class="nf">open</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="File3D.close"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.File3D.close">[docs]</a>    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="File3D.get_buffer"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.File3D.get_buffer">[docs]</a>    <span class="k">def</span> <span class="nf">get_buffer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">size</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get a buffer of `size` bytes. cache buffers by key (`size`, `name`) for efficient re-use.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_buffers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">b</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">b</span> <span class="o">=</span> <span class="n">bytes_aligned</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_buffers</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">b</span>
+        <span class="k">return</span> <span class="n">b</span></div>
+
+    <span class="k">def</span> <span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">open</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exc_type</span><span class="p">,</span> <span class="n">exc_value</span><span class="p">,</span> <span class="n">tb</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="FileSet3D"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.FileSet3D">[docs]</a><span class="k">class</span> <span class="nc">FileSet3D</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="FileSet3D.__init__"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.FileSet3D.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">files</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        files : list of File3D</span>
+<span class="sd">            files that are part of a partition or dataset</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_files</span> <span class="o">=</span> <span class="n">files</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tree</span> <span class="o">=</span> <span class="n">FileTree</span><span class="o">.</span><span class="n">make</span><span class="p">(</span><span class="n">files</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tree</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">files</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_files_open</span> <span class="o">=</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="FileSet3D.get_for_range"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.FileSet3D.get_for_range">[docs]</a>    <span class="k">def</span> <span class="nf">get_for_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return new FileSet3D filtered for files having frames in the [start, stop) range</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">files</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_files_for_range</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">files</span><span class="o">=</span><span class="n">files</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_get_files_for_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return new list of files filtered for files having frames in the [start, stop) range</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">files</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">files_from</span><span class="p">(</span><span class="n">start</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">start_idx</span> <span class="o">&gt;</span> <span class="n">stop</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="n">files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="k">return</span> <span class="n">files</span>
+
+<div class="viewcode-block" id="FileSet3D.files_from"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.FileSet3D.files_from">[docs]</a>    <span class="k">def</span> <span class="nf">files_from</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="p">):</span>
+        <span class="n">lower_bound</span><span class="p">,</span> <span class="n">f</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tree</span><span class="o">.</span><span class="n">search_start</span><span class="p">(</span><span class="n">start</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">lower_bound</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_files</span><span class="p">)):</span>
+            <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">_files</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="FileSet3D.read_images_multifile"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.FileSet3D.read_images_multifile">[docs]</a>    <span class="k">def</span> <span class="nf">read_images_multifile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">crop_to</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        read frames starting at index `start` up to but not including index `stop`</span>
+<span class="sd">        from multiple files into the buffer `out`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_files_open</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                <span class="s2">&quot;only call read_images_multifile when having the &quot;</span>
+                <span class="s2">&quot;fileset opened via with-statement&quot;</span>
+            <span class="p">)</span>
+        <span class="n">frames_read</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">files_from</span><span class="p">(</span><span class="n">start</span><span class="p">):</span>
+            <span class="c1"># after the range of interest</span>
+            <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">start_idx</span> <span class="o">&gt;</span> <span class="n">stop</span> <span class="ow">or</span> <span class="n">frames_read</span> <span class="o">==</span> <span class="n">stop</span> <span class="o">-</span> <span class="n">start</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="n">f_start</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">start</span> <span class="o">-</span> <span class="n">f</span><span class="o">.</span><span class="n">start_idx</span><span class="p">)</span>
+            <span class="n">f_stop</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">stop</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">end_idx</span><span class="p">)</span> <span class="o">-</span> <span class="n">f</span><span class="o">.</span><span class="n">start_idx</span>
+
+            <span class="c1"># slice output buffer to the part that is contained in the current file</span>
+            <span class="n">buf</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span>
+                <span class="n">frames_read</span><span class="p">:</span><span class="n">frames_read</span> <span class="o">+</span> <span class="p">(</span><span class="n">f_stop</span> <span class="o">-</span> <span class="n">f_start</span><span class="p">)</span>
+            <span class="p">]</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">readinto</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="n">f_start</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="n">f_stop</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">buf</span><span class="p">,</span> <span class="n">crop_to</span><span class="o">=</span><span class="n">crop_to</span><span class="p">)</span>
+
+            <span class="n">frames_read</span> <span class="o">+=</span> <span class="n">f_stop</span> <span class="o">-</span> <span class="n">f_start</span>
+        <span class="k">assert</span> <span class="n">frames_read</span> <span class="o">==</span> <span class="n">out</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+
+    <span class="k">def</span> <span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_files</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">open</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_files_open</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">exc</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_files</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_files_open</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">iter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_files</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Partition3D"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.Partition3D">[docs]</a><span class="k">class</span> <span class="nc">Partition3D</span><span class="p">(</span><span class="n">Partition</span><span class="p">):</span>
+<div class="viewcode-block" id="Partition3D.__init__"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.Partition3D.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fileset</span><span class="p">,</span> <span class="n">start_frame</span><span class="p">,</span> <span class="n">num_frames</span><span class="p">,</span> <span class="n">stackheight</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        fileset : FileSet3D</span>
+<span class="sd">            The files that are part of this partition (the FileSet3D may also contain files</span>
+<span class="sd">            from the dataset which are not part of this partition, but that may harm performance)</span>
+
+<span class="sd">        start_frame : int</span>
+<span class="sd">            The index of the first frame of this partition (global coords)</span>
+
+<span class="sd">        num_frames : int</span>
+<span class="sd">            How many frames this partition should contain</span>
+
+<span class="sd">        stackheight : int</span>
+<span class="sd">            How many frames per tile? Default value, can be overridden by</span>
+<span class="sd">            `target_size` in `get_tiles`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fileset</span> <span class="o">=</span> <span class="n">fileset</span><span class="o">.</span><span class="n">get_for_range</span><span class="p">(</span><span class="n">start_frame</span><span class="p">,</span> <span class="n">start_frame</span> <span class="o">+</span> <span class="n">num_frames</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_start_frame</span> <span class="o">=</span> <span class="n">start_frame</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_num_frames</span> <span class="o">=</span> <span class="n">num_frames</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_stackheight</span> <span class="o">=</span> <span class="n">stackheight</span>
+        <span class="k">assert</span> <span class="n">num_frames</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;invalid number of frames: </span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">num_frames</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_get_stackheight</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sig_shape</span><span class="p">,</span> <span class="n">dest_dtype</span><span class="p">,</span> <span class="n">target_size</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute target stackheight</span>
+
+<span class="sd">        The cropped tile of size `sig_shape` should fit into `target_size`,</span>
+<span class="sd">        once converted to `dest_dtype`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">target_size</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stackheight</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stackheight</span>
+            <span class="n">target_size</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span>
+        <span class="n">framesize</span> <span class="o">=</span> <span class="n">sig_shape</span><span class="o">.</span><span class="n">size</span> <span class="o">*</span> <span class="n">dest_dtype</span><span class="o">.</span><span class="n">itemsize</span>
+        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">target_size</span> <span class="o">/</span> <span class="n">framesize</span><span class="p">)),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_frames</span><span class="p">))</span>
+
+<div class="viewcode-block" id="Partition3D.make_slices"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.Partition3D.make_slices">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">make_slices</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">num_partitions</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        partition a 3D dataset (&quot;list of frames&quot;) along the first axis,</span>
+<span class="sd">        yielding the partition slice, and additionally start and stop frame</span>
+<span class="sd">        indices for each partition.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">num_frames</span> <span class="o">=</span> <span class="n">shape</span><span class="o">.</span><span class="n">nav</span><span class="o">.</span><span class="n">size</span>
+        <span class="n">f_per_part</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_frames</span> <span class="o">//</span> <span class="n">num_partitions</span><span class="p">)</span>
+
+        <span class="n">c0</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">f_per_part</span><span class="p">)</span>
+        <span class="n">c1</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="n">f_per_part</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">f_per_part</span><span class="p">)</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">c1</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">start</span> <span class="o">&gt;=</span> <span class="n">num_frames</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="n">stop</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">stop</span><span class="p">,</span> <span class="n">num_frames</span><span class="p">)</span>
+            <span class="n">part_slice</span> <span class="o">=</span> <span class="n">Slice</span><span class="p">(</span>
+                <span class="n">origin</span><span class="o">=</span><span class="p">(</span><span class="n">start</span><span class="p">,)</span> <span class="o">+</span> <span class="nb">tuple</span><span class="p">([</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">shape</span><span class="o">.</span><span class="n">sig</span><span class="o">.</span><span class="n">dims</span><span class="p">),</span>
+                <span class="n">shape</span><span class="o">=</span><span class="n">Shape</span><span class="p">(((</span><span class="n">stop</span> <span class="o">-</span> <span class="n">start</span><span class="p">),)</span> <span class="o">+</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">shape</span><span class="o">.</span><span class="n">sig</span><span class="p">),</span>
+                            <span class="n">sig_dims</span><span class="o">=</span><span class="n">shape</span><span class="o">.</span><span class="n">sig</span><span class="o">.</span><span class="n">dims</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="k">yield</span> <span class="n">part_slice</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span></div>
+
+<div class="viewcode-block" id="Partition3D.get_tiles"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.Partition3D.get_tiles">[docs]</a>    <span class="k">def</span> <span class="nf">get_tiles</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">crop_to</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">full_frames</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">mmap</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">dest_dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">,</span>
+                  <span class="n">roi</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">target_size</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        roi should be a 1d bitmask with the same shape as the navigation axis of the dataset</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># TODO: implement reading tiles that contain parts of frames (and more depth)</span>
+        <span class="c1"># the same notes as below in _get_tiles_normal apply; takes some work to make it efficient</span>
+        <span class="n">dest_dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">dest_dtype</span><span class="p">)</span>
+        <span class="c1"># disable mmap if type conversion takes place:</span>
+        <span class="k">if</span> <span class="n">dest_dtype</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">raw_dtype</span><span class="p">:</span>
+            <span class="n">mmap</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">mmap</span> <span class="o">=</span> <span class="n">mmap</span> <span class="ow">and</span> <span class="s2">&quot;MMAP&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">iocaps</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">crop_to</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="s2">&quot;FRAME_CROPS&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">iocaps</span>
+                <span class="ow">and</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">crop_to</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">sig</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">sig</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;cannot crop in signal dimensions yet&quot;</span><span class="p">)</span>
+            <span class="c1"># FIXME: not fully implemented; see _get_tiles_mmap</span>
+            <span class="c1"># efficient impl:</span>
+            <span class="c1">#  - read only as much as we need</span>
+            <span class="c1">#    (hard, because that means strided reads → many syscalls! io_uring?)</span>
+            <span class="c1">#  - no copying (except if dtype conversion is needed)</span>
+            <span class="c1"># compromise:</span>
+            <span class="c1">#  - only read full rows</span>
+            <span class="c1">#  - only needs 1 read per frame</span>
+            <span class="c1">#  - return view of cropped area into buffer that contains full rows</span>
+            <span class="c1"># bad first impl possible:</span>
+            <span class="c1">#  - read stackheight full frames</span>
+            <span class="c1">#  - crop out the region we are interested in</span>
+            <span class="c1">#  - can be implemented right here in this function actually!</span>
+            <span class="c1">#  - stackheight needs to be limited, otherwise we thrash the CPU cache</span>
+            <span class="c1">#    (we can&#39;t set stackheight to something that would fit the crop into the caches...)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">crop_to</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                <span class="ow">and</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">crop_to</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">sig</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">sig</span><span class="p">)</span>
+                <span class="ow">and</span> <span class="n">full_frames</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;cannot crop and request full frames at the same time&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">crop_to</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">roi</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">crop_to</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">nav</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_frames</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;don&#39;t use crop_to with roi&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">roi</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">yield from</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_tiles_with_roi</span><span class="p">(</span>
+                <span class="n">crop_to</span><span class="p">,</span> <span class="n">full_frames</span><span class="p">,</span> <span class="n">dest_dtype</span><span class="p">,</span> <span class="n">roi</span><span class="p">,</span> <span class="n">target_size</span><span class="o">=</span><span class="n">target_size</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">mmap</span><span class="p">:</span>
+            <span class="k">yield from</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_tiles_mmap</span><span class="p">(</span>
+                <span class="n">crop_to</span><span class="p">,</span> <span class="n">full_frames</span><span class="p">,</span> <span class="n">dest_dtype</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">yield from</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_tiles_normal</span><span class="p">(</span>
+                <span class="n">crop_to</span><span class="p">,</span> <span class="n">full_frames</span><span class="p">,</span> <span class="n">dest_dtype</span><span class="p">,</span> <span class="n">target_size</span><span class="o">=</span><span class="n">target_size</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_get_tiles_normal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">crop_to</span><span class="p">,</span> <span class="n">full_frames</span><span class="p">,</span> <span class="n">dest_dtype</span><span class="p">,</span> <span class="n">target_size</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">start_at_frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_start_frame</span>
+        <span class="n">num_frames</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_frames</span>
+        <span class="n">sig_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">sig</span>
+        <span class="n">sig_origin</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">([</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">sig_shape</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">crop_to</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">sig_origin</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">crop_to</span><span class="o">.</span><span class="n">origin</span><span class="p">[</span><span class="o">-</span><span class="n">sig_shape</span><span class="o">.</span><span class="n">dims</span><span class="p">:])</span>
+            <span class="n">sig_shape</span> <span class="o">=</span> <span class="n">crop_to</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">sig</span>
+        <span class="k">if</span> <span class="n">full_frames</span><span class="p">:</span>
+            <span class="n">sig_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">sig</span>
+        <span class="n">stackheight</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_stackheight</span><span class="p">(</span>
+            <span class="n">sig_shape</span><span class="o">=</span><span class="n">sig_shape</span><span class="p">,</span> <span class="n">dest_dtype</span><span class="o">=</span><span class="n">dest_dtype</span><span class="p">,</span> <span class="n">target_size</span><span class="o">=</span><span class="n">target_size</span><span class="p">)</span>
+        <span class="n">tile_buf_full</span> <span class="o">=</span> <span class="n">zeros_aligned</span><span class="p">((</span><span class="n">stackheight</span><span class="p">,)</span> <span class="o">+</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">sig_shape</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dest_dtype</span><span class="p">)</span>
+
+        <span class="n">tileshape</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">stackheight</span><span class="p">,</span>
+        <span class="p">)</span> <span class="o">+</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">sig_shape</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fileset</span> <span class="k">as</span> <span class="n">fileset</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">outer_frame</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">start_at_frame</span><span class="p">,</span> <span class="n">start_at_frame</span> <span class="o">+</span> <span class="n">num_frames</span><span class="p">,</span> <span class="n">stackheight</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">start_at_frame</span> <span class="o">+</span> <span class="n">num_frames</span> <span class="o">-</span> <span class="n">outer_frame</span> <span class="o">&lt;</span> <span class="n">stackheight</span><span class="p">:</span>
+                    <span class="n">end_frame</span> <span class="o">=</span> <span class="n">start_at_frame</span> <span class="o">+</span> <span class="n">num_frames</span>
+                    <span class="n">current_stackheight</span> <span class="o">=</span> <span class="n">end_frame</span> <span class="o">-</span> <span class="n">outer_frame</span>
+                    <span class="n">current_tileshape</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="n">current_stackheight</span><span class="p">,</span>
+                    <span class="p">)</span> <span class="o">+</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">sig_shape</span><span class="p">)</span>
+                    <span class="n">tile_buf</span> <span class="o">=</span> <span class="n">zeros_aligned</span><span class="p">(</span><span class="n">current_tileshape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dest_dtype</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">current_stackheight</span> <span class="o">=</span> <span class="n">stackheight</span>
+                    <span class="n">current_tileshape</span> <span class="o">=</span> <span class="n">tileshape</span>
+                    <span class="n">tile_buf</span> <span class="o">=</span> <span class="n">tile_buf_full</span>
+                <span class="n">tile_slice</span> <span class="o">=</span> <span class="n">Slice</span><span class="p">(</span>
+                    <span class="n">origin</span><span class="o">=</span><span class="p">(</span><span class="n">outer_frame</span><span class="p">,)</span> <span class="o">+</span> <span class="n">sig_origin</span><span class="p">,</span>
+                    <span class="n">shape</span><span class="o">=</span><span class="n">Shape</span><span class="p">(</span><span class="n">current_tileshape</span><span class="p">,</span> <span class="n">sig_dims</span><span class="o">=</span><span class="n">sig_shape</span><span class="o">.</span><span class="n">dims</span><span class="p">)</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="n">crop_to</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">intersection</span> <span class="o">=</span> <span class="n">tile_slice</span><span class="o">.</span><span class="n">intersection_with</span><span class="p">(</span><span class="n">crop_to</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">intersection</span><span class="o">.</span><span class="n">is_null</span><span class="p">():</span>
+                        <span class="k">continue</span>
+                <span class="n">fileset</span><span class="o">.</span><span class="n">read_images_multifile</span><span class="p">(</span>
+                    <span class="n">start</span><span class="o">=</span><span class="n">outer_frame</span><span class="p">,</span>
+                    <span class="n">stop</span><span class="o">=</span><span class="n">outer_frame</span> <span class="o">+</span> <span class="n">current_stackheight</span><span class="p">,</span>
+                    <span class="n">out</span><span class="o">=</span><span class="n">tile_buf</span><span class="p">,</span>
+                    <span class="n">crop_to</span><span class="o">=</span><span class="n">crop_to</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="k">yield</span> <span class="n">DataTile</span><span class="p">(</span>
+                    <span class="n">data</span><span class="o">=</span><span class="n">tile_buf</span><span class="p">,</span>
+                    <span class="n">tile_slice</span><span class="o">=</span><span class="n">tile_slice</span>
+                <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_tiles_with_roi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">crop_to</span><span class="p">,</span> <span class="n">full_frames</span><span class="p">,</span> <span class="n">dest_dtype</span><span class="p">,</span> <span class="n">roi</span><span class="p">,</span> <span class="n">target_size</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        With a ROI, we yield tiles from a &quot;compressed&quot; navigation axis, relative to</span>
+<span class="sd">        the beginning of the partition. Compressed means, only frames that have a 1</span>
+<span class="sd">        in the ROI are considered, and the resulting tile slices are from a coordinate</span>
+<span class="sd">        system that has the shape `(np.count_nonzero(roi),)`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">start_at_frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_start_frame</span>
+        <span class="n">sig_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">sig</span>
+        <span class="n">sig_origin</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">([</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">sig_shape</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">crop_to</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">sig_origin</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">crop_to</span><span class="o">.</span><span class="n">origin</span><span class="p">[</span><span class="o">-</span><span class="n">sig_shape</span><span class="o">.</span><span class="n">dims</span><span class="p">:])</span>
+            <span class="n">sig_shape</span> <span class="o">=</span> <span class="n">crop_to</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">sig</span>
+        <span class="k">if</span> <span class="n">full_frames</span><span class="p">:</span>
+            <span class="n">sig_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">sig</span>
+        <span class="n">stackheight</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_stackheight</span><span class="p">(</span>
+            <span class="n">sig_shape</span><span class="o">=</span><span class="n">sig_shape</span><span class="p">,</span> <span class="n">dest_dtype</span><span class="o">=</span><span class="n">dest_dtype</span><span class="p">,</span> <span class="n">target_size</span><span class="o">=</span><span class="n">target_size</span><span class="p">)</span>
+        <span class="n">tile_buf</span> <span class="o">=</span> <span class="n">zeros_aligned</span><span class="p">((</span><span class="n">stackheight</span><span class="p">,)</span> <span class="o">+</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">sig_shape</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dest_dtype</span><span class="p">)</span>
+
+        <span class="n">frames_read</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">tile_idx</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">frame_idx</span> <span class="o">=</span> <span class="n">start_at_frame</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">_roi_to_indices</span><span class="p">(</span><span class="n">roi</span><span class="p">,</span> <span class="n">start_at_frame</span><span class="p">,</span> <span class="n">start_at_frame</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_frames</span><span class="p">)</span>
+
+        <span class="n">roi</span> <span class="o">=</span> <span class="n">roi</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,))</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fileset</span> <span class="k">as</span> <span class="n">fileset</span><span class="p">:</span>
+            <span class="n">outer_frame</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">frame_offset</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">count_nonzero</span><span class="p">(</span><span class="n">roi</span><span class="p">[:</span><span class="n">start_at_frame</span><span class="p">])</span>
+            <span class="k">for</span> <span class="n">frame_idx</span> <span class="ow">in</span> <span class="n">indices</span><span class="p">:</span>
+                <span class="n">fileset</span><span class="o">.</span><span class="n">read_images_multifile</span><span class="p">(</span>
+                    <span class="n">start</span><span class="o">=</span><span class="n">frame_idx</span><span class="p">,</span>
+                    <span class="n">stop</span><span class="o">=</span><span class="n">frame_idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                    <span class="n">out</span><span class="o">=</span><span class="n">tile_buf</span><span class="p">[</span><span class="n">tile_idx</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">1</span><span class="p">,)</span> <span class="o">+</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">sig_shape</span><span class="p">)),</span>
+                    <span class="n">crop_to</span><span class="o">=</span><span class="n">crop_to</span><span class="p">,</span>
+                <span class="p">)</span>
+
+                <span class="n">tile_idx</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">frames_read</span> <span class="o">+=</span> <span class="mi">1</span>
+
+                <span class="k">if</span> <span class="n">tile_idx</span> <span class="o">==</span> <span class="n">stackheight</span><span class="p">:</span>
+                    <span class="n">tile_slice</span> <span class="o">=</span> <span class="n">Slice</span><span class="p">(</span>
+                        <span class="n">origin</span><span class="o">=</span><span class="p">(</span><span class="n">outer_frame</span> <span class="o">+</span> <span class="n">frame_offset</span><span class="p">,)</span> <span class="o">+</span> <span class="n">sig_origin</span><span class="p">,</span>
+                        <span class="n">shape</span><span class="o">=</span><span class="n">Shape</span><span class="p">((</span><span class="n">tile_idx</span><span class="p">,)</span> <span class="o">+</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">sig_shape</span><span class="p">),</span> <span class="n">sig_dims</span><span class="o">=</span><span class="n">sig_shape</span><span class="o">.</span><span class="n">dims</span><span class="p">)</span>
+                    <span class="p">)</span>
+                    <span class="k">yield</span> <span class="n">DataTile</span><span class="p">(</span>
+                        <span class="n">data</span><span class="o">=</span><span class="n">tile_buf</span><span class="p">[:</span><span class="n">tile_idx</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+                        <span class="n">tile_slice</span><span class="o">=</span><span class="n">tile_slice</span>
+                    <span class="p">)</span>
+                    <span class="n">tile_idx</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="n">outer_frame</span> <span class="o">=</span> <span class="n">frames_read</span>
+        <span class="k">if</span> <span class="n">tile_idx</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># last frame, size != stackheight</span>
+            <span class="n">tile_slice</span> <span class="o">=</span> <span class="n">Slice</span><span class="p">(</span>
+                <span class="n">origin</span><span class="o">=</span><span class="p">(</span><span class="n">outer_frame</span> <span class="o">+</span> <span class="n">frame_offset</span><span class="p">,)</span> <span class="o">+</span> <span class="n">sig_origin</span><span class="p">,</span>
+                <span class="n">shape</span><span class="o">=</span><span class="n">Shape</span><span class="p">((</span><span class="n">tile_idx</span><span class="p">,)</span> <span class="o">+</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">sig_shape</span><span class="p">),</span> <span class="n">sig_dims</span><span class="o">=</span><span class="n">sig_shape</span><span class="o">.</span><span class="n">dims</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="k">yield</span> <span class="n">DataTile</span><span class="p">(</span>
+                <span class="n">data</span><span class="o">=</span><span class="n">tile_buf</span><span class="p">[:</span><span class="n">tile_idx</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+                <span class="n">tile_slice</span><span class="o">=</span><span class="n">tile_slice</span>
+            <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_tiles_mmap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">crop_to</span><span class="p">,</span> <span class="n">full_frames</span><span class="p">,</span> <span class="n">dest_dtype</span><span class="p">):</span>
+        <span class="n">start_at_frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_start_frame</span>
+        <span class="n">num_frames</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_frames</span>
+        <span class="n">sig_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">sig</span>
+        <span class="n">sig_origin</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">([</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">sig_shape</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">dest_dtype</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">raw_dtype</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;using mmap with dtype conversion is not efficient&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">crop_to</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">sig_origin</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">crop_to</span><span class="o">.</span><span class="n">origin</span><span class="p">[</span><span class="o">-</span><span class="n">sig_shape</span><span class="o">.</span><span class="n">dims</span><span class="p">:])</span>
+            <span class="n">sig_shape</span> <span class="o">=</span> <span class="n">crop_to</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">sig</span>
+        <span class="k">if</span> <span class="n">full_frames</span><span class="p">:</span>
+            <span class="n">sig_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">sig</span>
+
+        <span class="n">fileset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fileset</span><span class="o">.</span><span class="n">get_for_range</span><span class="p">(</span>
+            <span class="n">start</span><span class="o">=</span><span class="n">start_at_frame</span><span class="p">,</span>
+            <span class="n">stop</span><span class="o">=</span><span class="n">start_at_frame</span> <span class="o">+</span> <span class="n">num_frames</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fileset</span> <span class="k">as</span> <span class="n">fileset</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">fileset</span><span class="p">:</span>
+                <span class="c1"># global start/stop indices:</span>
+                <span class="n">start</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">start_idx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_start_frame</span><span class="p">)</span>
+                <span class="n">stop</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">end_idx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_start_frame</span> <span class="o">+</span> <span class="n">num_frames</span><span class="p">)</span>
+
+                <span class="n">tile_slice</span> <span class="o">=</span> <span class="n">Slice</span><span class="p">(</span>
+                    <span class="n">origin</span><span class="o">=</span><span class="p">(</span><span class="n">start</span><span class="p">,)</span> <span class="o">+</span> <span class="n">sig_origin</span><span class="p">,</span>
+                    <span class="n">shape</span><span class="o">=</span><span class="n">Shape</span><span class="p">((</span><span class="n">stop</span> <span class="o">-</span> <span class="n">start</span><span class="p">,)</span> <span class="o">+</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">sig_shape</span><span class="p">),</span> <span class="n">sig_dims</span><span class="o">=</span><span class="n">sig_shape</span><span class="o">.</span><span class="n">dims</span><span class="p">)</span>
+                <span class="p">)</span>
+                <span class="n">arr</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">mmap</span><span class="p">()</span>
+                <span class="c1"># limit to this partition (translate to file-local coords)</span>
+                <span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[</span><span class="n">start</span> <span class="o">-</span> <span class="n">f</span><span class="o">.</span><span class="n">start_idx</span><span class="p">:</span><span class="n">stop</span> <span class="o">-</span> <span class="n">f</span><span class="o">.</span><span class="n">start_idx</span><span class="p">]</span>
+
+                <span class="k">if</span> <span class="n">crop_to</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">intersection</span> <span class="o">=</span> <span class="n">tile_slice</span><span class="o">.</span><span class="n">intersection_with</span><span class="p">(</span><span class="n">crop_to</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">intersection</span><span class="o">.</span><span class="n">is_null</span><span class="p">():</span>
+                        <span class="k">continue</span>
+                    <span class="c1"># crop to, signal part:</span>
+                    <span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[(</span><span class="o">...</span><span class="p">,)</span> <span class="o">+</span> <span class="n">tile_slice</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">sig_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)]</span>
+                <span class="k">yield</span> <span class="n">DataTile</span><span class="p">(</span>
+                    <span class="n">data</span><span class="o">=</span><span class="n">arr</span><span class="p">,</span>
+                    <span class="n">tile_slice</span><span class="o">=</span><span class="n">tile_slice</span>
+                <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="PartitionStructure"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.PartitionStructure">[docs]</a><span class="k">class</span> <span class="nc">PartitionStructure</span><span class="p">:</span>
+    <span class="n">SCHEMA</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;$schema&quot;</span><span class="p">:</span> <span class="s2">&quot;http://json-schema.org/draft-07/schema#&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;$id&quot;</span><span class="p">:</span> <span class="s2">&quot;http://libertem.org/PartitionStructure.schema.json&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;PartitionStructure&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;object&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;properties&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;const&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span>
+            <span class="s2">&quot;slices&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;array&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;items&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;array&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;items&quot;</span><span class="p">:</span> <span class="p">{</span>
+                        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;number&quot;</span><span class="p">,</span> <span class="s2">&quot;minItems&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;maxItems&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+                    <span class="p">}</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;minItems&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="s2">&quot;shape&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;array&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;items&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;number&quot;</span><span class="p">,</span> <span class="s2">&quot;minimum&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span>
+                <span class="s2">&quot;minItems&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="s2">&quot;sig_dims&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;number&quot;</span><span class="p">},</span>
+            <span class="s2">&quot;dtype&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;string&quot;</span><span class="p">},</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;required&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;version&quot;</span><span class="p">,</span> <span class="s2">&quot;slices&quot;</span><span class="p">,</span> <span class="s2">&quot;shape&quot;</span><span class="p">,</span> <span class="s2">&quot;sig_dims&quot;</span><span class="p">,</span> <span class="s2">&quot;dtype&quot;</span><span class="p">]</span>
+    <span class="p">}</span>
+
+<div class="viewcode-block" id="PartitionStructure.__init__"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.PartitionStructure.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">slices</span><span class="p">,</span> <span class="n">dtype</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Structure of the dataset.</span>
+
+<span class="sd">        Assumed to be contiguous on the flattened navigation axis.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        slices : List[Tuple[Int]]</span>
+<span class="sd">            List of tuples [start_idx, end_idx) that partition the data set by the flattened</span>
+<span class="sd">            navigation axis</span>
+
+<span class="sd">        shape : Shape</span>
+<span class="sd">            shape of the whole dataset</span>
+
+<span class="sd">        dtype : numpy dtype</span>
+<span class="sd">            The dtype of the data as it is on disk. Can contain endian indicator, for</span>
+<span class="sd">            example &gt;u2 for big-endian 16bit data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slices</span> <span class="o">=</span> <span class="n">slices</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="n">shape</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="PartitionStructure.serialize"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.PartitionStructure.serialize">[docs]</a>    <span class="k">def</span> <span class="nf">serialize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="s2">&quot;slices&quot;</span><span class="p">:</span> <span class="p">[[</span><span class="n">s</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">slices</span><span class="p">],</span>
+            <span class="s2">&quot;shape&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span>
+            <span class="s2">&quot;sig_dims&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">sig</span><span class="o">.</span><span class="n">dims</span><span class="p">,</span>
+            <span class="s2">&quot;dtype&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">),</span>
+        <span class="p">}</span>
+        <span class="n">jsonschema</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span><span class="n">schema</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">SCHEMA</span><span class="p">,</span> <span class="n">instance</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+<div class="viewcode-block" id="PartitionStructure.from_json"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.PartitionStructure.from_json">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_json</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="n">jsonschema</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span><span class="n">schema</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="n">SCHEMA</span><span class="p">,</span> <span class="n">instance</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">shape</span> <span class="o">=</span> <span class="n">Shape</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;shape&quot;</span><span class="p">]),</span> <span class="n">sig_dims</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;sig_dims&quot;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">PartitionStructure</span><span class="p">(</span>
+            <span class="n">slices</span><span class="o">=</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;slices&quot;</span><span class="p">]],</span>
+            <span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">,</span>
+            <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]),</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="PartitionStructure.from_ds"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.base.PartitionStructure.from_ds">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_ds</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">ds</span><span class="p">):</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="s2">&quot;slices&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">slice</span><span class="o">.</span><span class="n">origin</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">p</span><span class="o">.</span><span class="n">slice</span><span class="o">.</span><span class="n">origin</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">p</span><span class="o">.</span><span class="n">slice</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+                <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">get_partitions</span><span class="p">()</span>
+            <span class="p">],</span>
+            <span class="s2">&quot;shape&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span>
+            <span class="s2">&quot;sig_dims&quot;</span><span class="p">:</span> <span class="n">ds</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">sig</span><span class="o">.</span><span class="n">dims</span><span class="p">,</span>
+            <span class="s2">&quot;dtype&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">dtype</span><span class="p">),</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">from_json</span><span class="p">(</span><span class="n">data</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../../../../index.html">
+    <img class="logo" src="../../../../_static/logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../usage.html">GUI usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../concepts.html">Concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../formats.html">Loading data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../udf.html">User-defined functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../applications.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../performance.html">Performance</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../debugging.html">Debugging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../reference/index.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../tips.html">Tips and tricks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../why_python.html">Why Python?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../gsoc.html">GSoC 2019 ideas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../authorship.html">Authorship policy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../citing.html">Citing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../acknowledgments.html">Acknowledgments</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, LiberTEM Authors.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

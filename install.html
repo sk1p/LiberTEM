@@ -1,0 +1,376 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Installation &#8212; LiberTEM 0.4.0.dev0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="GUI usage" href="usage.html" />
+    <link rel="prev" title="LiberTEM - Open Pixelated STEM platform" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="installation">
+<span id="id1"></span><h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Installation of LiberTEM is currently not working smoothly with Python 3.8
+because of installation issues with some dependencies. Python 3.6 and Python
+3.7 are supported.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Distinguish between installing a released version and installing the latest
+development version. Both <a class="reference internal" href="#installing-from-pypi">installing from PyPi</a> and <a class="reference internal" href="#installing-from-a-git-clone">installing from a git
+clone</a> use pip, but they do fundamentally different things. <code class="code docutils literal notranslate"><span class="pre">pip</span>
+<span class="pre">install</span> <span class="pre">libertem</span></code> downloads the latest release from PyPi, which can be
+somewhat older.</p>
+<p>Changing directory to a git clone and running <code class="code docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">-e</span> <span class="pre">.</span></code>
+installs from the local directory in editable mode. “Editable mode” means
+that the source directory is linked into the current Python environment
+rather than copied. That means changes in the source directory are
+immediately active in the Python environment.</p>
+<p>Installing from a git clone in editable mode is the correct setup for
+development work and using <a class="reference internal" href="changelog.html#continuous"><span class="std std-ref">the latest features in the development
+branch</span></a>. Installing from PyPI is easier and preferred for new
+users.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This documentation currently assumes that you are using LiberTEM on a single
+computer. If you want to run on a cluster, please let us know by
+either <a class="reference external" href="https://github.com/liberTEM/LiberTEM/issues">filing an issue</a>
+or by asking on <a class="reference external" href="https://gitter.im/LiberTEM/Lobby">our Gitter channel</a>.</p>
+</div>
+<div class="section" id="linux-and-mac-os-x">
+<h2>Linux and Mac OS X<a class="headerlink" href="#linux-and-mac-os-x" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="appimage">
+<h3>AppImage<a class="headerlink" href="#appimage" title="Permalink to this headline">¶</a></h3>
+<p>On Linux, the easiest method is to use the provided AppImage. Just download the
+AppImage file from <a class="reference external" href="https://github.com/LiberTEM/LiberTEM/releases">our releases page on GitHub</a>, mark it executable and run
+the AppImage. See also the <a class="reference external" href="https://docs.appimage.org/user-guide/run-appimages.html">official documentation</a>. Continue by reading
+the <a class="reference internal" href="usage.html#usage-documentation"><span class="std std-ref">GUI usage</span></a>.</p>
+</div>
+<div class="section" id="creating-an-isolated-python-environment">
+<h3>Creating an isolated Python environment<a class="headerlink" href="#creating-an-isolated-python-environment" title="Permalink to this headline">¶</a></h3>
+<p>To provide an isolated environment for LiberTEM and its dependencies, you can
+use virtualenvs or conda environments.</p>
+<div class="section" id="using-virtualenv">
+<h4>Using virtualenv<a class="headerlink" href="#using-virtualenv" title="Permalink to this headline">¶</a></h4>
+<p>You can use <a class="reference external" href="https://virtualenv.pypa.io/">virtualenv</a> or <a class="reference external" href="https://docs.python.org/3/tutorial/venv.html">venv</a> if you have a system-wide
+Python 3.6 or 3.7 installation. For Mac OS X, using conda is recommended.</p>
+<p>To create a new virtualenv for LiberTEM, you can use the following command:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>$ virtualenv -p python3.7 ~/libertem-venv/
+</pre></div>
+</div>
+<p>Replace <code class="code docutils literal notranslate"><span class="pre">~/libertem-venv/</span></code> with any path where you would like to create
+the venv. You can then activate the virtualenv with</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>$ <span class="nb">source</span> ~/libertem-venv/bin/activate
+</pre></div>
+</div>
+<p>Afterwards, your shell prompt should be prefixed with <code class="code docutils literal notranslate"><span class="pre">(libertem)</span></code> to
+indicate that the environment is active:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="o">(</span>libertem<span class="o">)</span> $
+</pre></div>
+</div>
+<p>For more information about virtualenv, for example if you are using a shell
+without <cite>source</cite>, please <a class="reference external" href="https://virtualenv.pypa.io/en/stable/userguide/#user-guide">refer to the virtualenv documentation</a>. If you are often
+working with virtualenvs, using a convenience wrapper like <a class="reference external" href="https://virtualenvwrapper.readthedocs.io/en/latest/">virtualenvwrapper</a> is recommended.</p>
+</div>
+<div class="section" id="using-conda">
+<h4>Using conda<a class="headerlink" href="#using-conda" title="Permalink to this headline">¶</a></h4>
+<p>If you are already using conda, or if you don’t have a system-wide Python 3.6 or
+3.7 installation, you can create a conda environment for LiberTEM.</p>
+<p>This section assumes that you have <a class="reference external" href="https://conda.io/projects/conda/en/latest/user-guide/install/index.html#regular-installation">installed conda</a>
+and that your installation is working.</p>
+<p>You can create a new conda environment to install LiberTEM with the following
+command:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>$ conda create -n libertem <span class="nv">python</span><span class="o">=</span><span class="m">3</span>.7
+</pre></div>
+</div>
+<p>To install or later run LiberTEM, activate the environment with the following
+command:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>$ <span class="nb">source</span> activate libertem
+</pre></div>
+</div>
+<p>Afterwards, your shell prompt should be prefixed with <code class="code docutils literal notranslate"><span class="pre">(libertem)</span></code> to
+indicate that the environment is active:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="o">(</span>libertem<span class="o">)</span> $
+</pre></div>
+</div>
+<p>Now the environment is ready to install LiberTEM.</p>
+<p>For more information about conda, see their <a class="reference external" href="https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html">documentation about creating and
+managing environments</a>.</p>
+</div>
+</div>
+<div class="section" id="installing-from-pypi">
+<h3>Installing from PyPi<a class="headerlink" href="#installing-from-pypi" title="Permalink to this headline">¶</a></h3>
+<p>To install the latest release version, you can use pip. Activate the Python
+environment (conda or virtualenv) and install using:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="o">(</span>libertem<span class="o">)</span> $ pip install libertem
+</pre></div>
+</div>
+<p>This should install LiberTEM and its dependencies in the environment. Please
+continue by reading the <a class="reference internal" href="usage.html#usage-documentation"><span class="std std-ref">GUI usage</span></a>.</p>
+</div>
+<div class="section" id="installing-from-a-git-clone">
+<span id="id2"></span><h3>Installing from a git clone<a class="headerlink" href="#installing-from-a-git-clone" title="Permalink to this headline">¶</a></h3>
+<p>If you want to follow the latest development or contribute to LiberTEM, you
+should install LiberTEM from a git clone:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>$ git clone https://github.com/LiberTEM/LiberTEM
+</pre></div>
+</div>
+<p>Activate the Python environment (conda or virtualenv) and change to the newly
+created directory with the clone of the LiberTEM repository. Now you can start
+the LiberTEM installation. Please note the dot at the end, which indicates the
+current directory!</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="o">(</span>libertem<span class="o">)</span> $ pip install -e .
+</pre></div>
+</div>
+<p>This should download the dependencies and install LiberTEM in the environment.
+Please continue by reading the <a class="reference internal" href="usage.html#usage-documentation"><span class="std std-ref">GUI usage</span></a>.</p>
+</div>
+<div class="section" id="pytorch">
+<h3>PyTorch<a class="headerlink" href="#pytorch" title="Permalink to this headline">¶</a></h3>
+<p>LiberTEM can use <a class="reference external" href="https://pytorch.org/">PyTorch</a> for processing if it is
+available. Otherwise it uses NumPy as a fallback. We’ve experienced up to 2x
+speed-ups with PyTorch compared to a default NumPy installation. For that reason
+we recommend <a class="reference external" href="https://pytorch.org/">installing PyTorch</a>. We currently use
+PyTorch only on the CPU. Contributions to use GPUs as well are very welcome!</p>
+<p>You can let pip install PyTorch automatically by using the torch variant, for
+example from PyPi:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="o">(</span>libertem<span class="o">)</span> $ pip install libertem<span class="o">[</span>torch<span class="o">]</span>
+</pre></div>
+</div>
+<p>Or from git checkout:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="o">(</span>libertem<span class="o">)</span> $ pip install -e .<span class="o">[</span>torch<span class="o">]</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="other-extra-packages">
+<h3>Other extra packages<a class="headerlink" href="#other-extra-packages" title="Permalink to this headline">¶</a></h3>
+<p>The full grid matching routines in <a class="reference internal" href="reference/app/strain.html#module-libertem.analysis.fullmatch" title="libertem.analysis.fullmatch"><code class="xref py py-mod docutils literal notranslate"><span class="pre">libertem.analysis.fullmatch</span></code></a> depend
+on <a class="reference external" href="https://hdbscan.readthedocs.io/en/latest/">HDBSCAN</a>. This is an optional
+dependency because of installation issues on some platforms.</p>
+<p>The fast correlation methods in <code class="xref py py-mod docutils literal notranslate"><span class="pre">libertem.udf.blobfinder</span></code> can optionally
+use <a class="reference external" href="https://hgomersall.github.io/pyFFTW/">pyFFTW</a> instead of the built-in
+Numpy FFT.</p>
+</div>
+<div class="section" id="updating">
+<h3>Updating<a class="headerlink" href="#updating" title="Permalink to this headline">¶</a></h3>
+<p>If you have installed from a git clone, you can easily update it to the current
+status. Open a command line in the base directory of the LiberTEM clone and
+update the source code with this command:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>$ git pull
+</pre></div>
+</div>
+<p>The installation with <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">-e</span></code> has installed LiberTEM in <a class="reference external" href="https://pip.pypa.io/en/stable/reference/pip_install/#editable-installs">“editable”
+mode</a>.
+That means the changes pulled from git are active immediately. Only if the
+requirements for installed third-party packages have changed, you can re-run
+<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">-e</span> <span class="pre">.</span></code> in order to install any missing packages.</p>
+<p>After updating the installation, you can run the updated version by restarting
+the libertem-server and afterwards reloading all browser windows that are
+running the LiberTEM GUI.</p>
+</div>
+</div>
+<div class="section" id="windows">
+<h2>Windows<a class="headerlink" href="#windows" title="Permalink to this headline">¶</a></h2>
+<p>The recommended method to install LiberTEM on Windows is based on <a class="reference external" href="https://www.anaconda.com/distribution/">Miniconda 64
+bit with Python version 3.6 or 3.7</a>.
+This installs a Python distribution.</p>
+<p>For <a class="reference internal" href="#installing-from-a-git-clone">installing from a git clone</a> you require a suitable git client, for
+example <a class="reference external" href="https://desktop.github.com/">GitHub Desktop</a>, <a class="reference external" href="https://tortoisegit.org/">TortoiseGit</a>, or <a class="reference external" href="https://gitforwindows.org/">git for windows</a>. Clone the repository
+<a class="reference external" href="https://github.com/LiberTEM/LiberTEM">https://github.com/LiberTEM/LiberTEM</a> in a folder of your choice.</p>
+<p>From here on the installation and running of LiberTEM on Windows with the
+Anaconda Prompt is very similar to <a class="reference internal" href="#using-conda">Using conda</a> on Linux or Mac OS X.</p>
+<p>Differences:</p>
+<ul class="simple">
+<li><p>The command to activate a conda environment on Windows is</p></li>
+</ul>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>&gt; conda activate libertem
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>You might have to install pip into your local LiberTEM conda environment to
+make sure that <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span></code> installs packages into your local environment and
+not into the global Anaconda base environment. This helps to avoid permission
+issues and interference between environments.</p></li>
+</ul>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="o">(</span>libertem<span class="o">)</span> &gt; conda install pip
+</pre></div>
+</div>
+</div>
+<div class="section" id="jupyter">
+<h2>Jupyter<a class="headerlink" href="#jupyter" title="Permalink to this headline">¶</a></h2>
+<p>To use the Python API from within a Jupyter notebook, you can install Jupyter
+into your LiberTEM virtual environment.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="o">(</span>libertem<span class="o">)</span> $ pip install jupyter
+</pre></div>
+</div>
+<p>You can then run a local notebook from within the LiberTEM environment, which
+should open a browser window with Jupyter that uses your LiberTEM environment.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="o">(</span>libertem<span class="o">)</span> $ jupyter notebook
+</pre></div>
+</div>
+</div>
+<div class="section" id="jupyterhub">
+<h2>JupyterHub<a class="headerlink" href="#jupyterhub" title="Permalink to this headline">¶</a></h2>
+<p>If you’d like to use the Python API from a LiberTEM virtual environment on a
+system that manages logins with JupyterHub, you can easily <a class="reference external" href="https://ipython.readthedocs.io/en/stable/install/kernel_install.html">install a custom
+kernel definition</a> for
+your LiberTEM environment.</p>
+<p>First, you can launch a terminal on JupyterHub from the “New” drop-down menu in
+the file browser. Alternatively you can execute shell commands by prefixing them
+with “!” in a Python notebook.</p>
+<p>In the terminal you can create and activate virtual environments and perform the
+LiberTEM installation as described above. Within the activated LiberTEM
+environment you additionally install ipykernel:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="o">(</span>libertem<span class="o">)</span> $ pip install ipykernel
+</pre></div>
+</div>
+<p>Now you can create a custom ipython kernel definition for your environment:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="o">(</span>libertem<span class="o">)</span> $ python -m ipykernel install --user --name libertem --display-name <span class="s2">&quot;Python (libertem)&quot;</span>
+</pre></div>
+</div>
+<p>After reloading the file browser window, a new Notebook option “Python
+(libertem)” should be available in the “New” drop-down menu. You can test it by
+creating a new notebook and running</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">In</span> <span class="p">[</span><span class="mi">1</span><span class="p">]:</span> <span class="kn">import</span> <span class="nn">libertem</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permalink to this headline">¶</a></h2>
+<p>If you are having trouble with the installation, please let us know by
+either <a class="reference external" href="https://github.com/liberTEM/LiberTEM/issues">filing an issue</a>
+or by asking on <a class="reference external" href="https://gitter.im/LiberTEM/Lobby">our Gitter channel</a>.</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="index.html">
+    <img class="logo" src="_static/logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#linux-and-mac-os-x">Linux and Mac OS X</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#windows">Windows</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#jupyter">Jupyter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#jupyterhub">JupyterHub</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#troubleshooting">Troubleshooting</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">GUI usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="concepts.html">Concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="formats.html">Loading data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="udf.html">User-defined functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="applications.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="performance.html">Performance</a></li>
+<li class="toctree-l1"><a class="reference internal" href="debugging.html">Debugging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/index.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tips.html">Tips and tricks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="why_python.html">Why Python?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gsoc.html">GSoC 2019 ideas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="authorship.html">Authorship policy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="citing.html">Citing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="acknowledgments.html">Acknowledgments</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">LiberTEM - Open Pixelated STEM platform</a></li>
+      <li>Next: <a href="usage.html" title="next chapter">GUI usage</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, LiberTEM Authors.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/install.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

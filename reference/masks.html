@@ -1,0 +1,336 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Mask creation and manipulation &#8212; LiberTEM 0.4.0.dev0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    <link rel="shortcut icon" href="../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Internal API" href="internals.html" />
+    <link rel="prev" title="Off-axis electron holography" href="app/holography.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-libertem.masks">
+<span id="mask-creation-and-manipulation"></span><h1>Mask creation and manipulation<a class="headerlink" href="#module-libertem.masks" title="Permalink to this headline">¶</a></h1>
+<dl class="function">
+<dt id="libertem.masks.background_subtraction">
+<code class="sig-prename descclassname">libertem.masks.</code><code class="sig-name descname">background_subtraction</code><span class="sig-paren">(</span><em class="sig-param">centerX</em>, <em class="sig-param">centerY</em>, <em class="sig-param">imageSizeX</em>, <em class="sig-param">imageSizeY</em>, <em class="sig-param">radius</em>, <em class="sig-param">radius_inner</em>, <em class="sig-param">antialiased=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/masks.html#background_subtraction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.masks.background_subtraction" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="libertem.masks.balance">
+<code class="sig-prename descclassname">libertem.masks.</code><code class="sig-name descname">balance</code><span class="sig-paren">(</span><em class="sig-param">template</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/masks.html#balance"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.masks.balance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Accept a template with both positive and negative values and scale the negative
+part in such a way that the sum is zero.</p>
+<p>This is useful to generate masks that return zero when applied to a
+uniform background or linear gradient.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="libertem.masks.bounding_radius">
+<code class="sig-prename descclassname">libertem.masks.</code><code class="sig-name descname">bounding_radius</code><span class="sig-paren">(</span><em class="sig-param">centerX</em>, <em class="sig-param">centerY</em>, <em class="sig-param">imageSizeX</em>, <em class="sig-param">imageSizeY</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/masks.html#bounding_radius"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.masks.bounding_radius" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate a radius around centerX, centerY that covers the whole frame</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="libertem.masks.circular">
+<code class="sig-prename descclassname">libertem.masks.</code><code class="sig-name descname">circular</code><span class="sig-paren">(</span><em class="sig-param">centerX</em>, <em class="sig-param">centerY</em>, <em class="sig-param">imageSizeX</em>, <em class="sig-param">imageSizeY</em>, <em class="sig-param">radius</em>, <em class="sig-param">antialiased=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/masks.html#circular"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.masks.circular" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make a circular mask as a 2D array</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>centreY</strong> (<em>centreX</em><em>,</em>) – Centre point of the mask.</p></li>
+<li><p><strong>imageSizeY</strong> (<em>imageSizeX</em><em>,</em>) – Size of the image to be masked.</p></li>
+<li><p><strong>radius</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Radius of the mask.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Array with the shape (imageSizeX, imageSizeY) with the mask.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Numpy 2D Array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="libertem.masks.gradient_x">
+<code class="sig-prename descclassname">libertem.masks.</code><code class="sig-name descname">gradient_x</code><span class="sig-paren">(</span><em class="sig-param">imageSizeX</em>, <em class="sig-param">imageSizeY</em>, <em class="sig-param">dtype=&lt;class 'numpy.float32'&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/masks.html#gradient_x"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.masks.gradient_x" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="libertem.masks.gradient_y">
+<code class="sig-prename descclassname">libertem.masks.</code><code class="sig-name descname">gradient_y</code><span class="sig-paren">(</span><em class="sig-param">imageSizeX</em>, <em class="sig-param">imageSizeY</em>, <em class="sig-param">dtype=&lt;class 'numpy.float32'&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/masks.html#gradient_y"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.masks.gradient_y" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="libertem.masks.is_sparse">
+<code class="sig-prename descclassname">libertem.masks.</code><code class="sig-name descname">is_sparse</code><span class="sig-paren">(</span><em class="sig-param">a</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/masks.html#is_sparse"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.masks.is_sparse" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="libertem.masks.polar_map">
+<code class="sig-prename descclassname">libertem.masks.</code><code class="sig-name descname">polar_map</code><span class="sig-paren">(</span><em class="sig-param">centerX</em>, <em class="sig-param">centerY</em>, <em class="sig-param">imageSizeX</em>, <em class="sig-param">imageSizeY</em>, <em class="sig-param">stretchY=1.0</em>, <em class="sig-param">angle=0.0</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/masks.html#polar_map"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.masks.polar_map" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a map of radius and angle.</p>
+<p>The optional parameters stretchY and angle allow to stretch and rotate the coordinate system
+into an elliptical form. This is useful to generate modified input data for functions that
+generate a template as a function of radius and angle.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>centerX</strong><strong>,</strong><strong>centerY</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Center of the coordinate system in pixel coordinates</p></li>
+<li><p><strong>imageSizeX</strong><strong>,</strong><strong>imageSizeY</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Size of the map to generate in px</p></li>
+<li><p><strong>stretchY</strong><strong>,</strong><strong>angle</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a><em>, </em><em>optional</em>) – Stretch the radius elliptically by amount <code class="code docutils literal notranslate"><span class="pre">stretchY</span></code> in direction
+<code class="code docutils literal notranslate"><span class="pre">angle</span></code> in radians. <code class="code docutils literal notranslate"><span class="pre">angle</span> <span class="pre">=</span> <span class="pre">0</span></code> means in Y direction.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Map of radius and angle of shape <code class="code docutils literal notranslate"><span class="pre">(imageSizeY,</span> <span class="pre">imageSizeX)</span></code></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Tuple[<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a>, <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="libertem.masks.radial_bins">
+<code class="sig-prename descclassname">libertem.masks.</code><code class="sig-name descname">radial_bins</code><span class="sig-paren">(</span><em class="sig-param">centerX</em>, <em class="sig-param">centerY</em>, <em class="sig-param">imageSizeX</em>, <em class="sig-param">imageSizeY</em>, <em class="sig-param">radius=None</em>, <em class="sig-param">radius_inner=0</em>, <em class="sig-param">n_bins=None</em>, <em class="sig-param">normalize=False</em>, <em class="sig-param">use_sparse=None</em>, <em class="sig-param">dtype=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/masks.html#radial_bins"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.masks.radial_bins" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate antialiased rings</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="libertem.masks.radial_gradient">
+<code class="sig-prename descclassname">libertem.masks.</code><code class="sig-name descname">radial_gradient</code><span class="sig-paren">(</span><em class="sig-param">centerX</em>, <em class="sig-param">centerY</em>, <em class="sig-param">imageSizeX</em>, <em class="sig-param">imageSizeY</em>, <em class="sig-param">radius</em>, <em class="sig-param">antialiased=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/masks.html#radial_gradient"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.masks.radial_gradient" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a linear radial gradient from 0 to 1 within radius</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="libertem.masks.radial_gradient_background_subtraction">
+<code class="sig-prename descclassname">libertem.masks.</code><code class="sig-name descname">radial_gradient_background_subtraction</code><span class="sig-paren">(</span><em class="sig-param">r</em>, <em class="sig-param">r0</em>, <em class="sig-param">r_outer</em>, <em class="sig-param">delta=1</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/masks.html#radial_gradient_background_subtraction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.masks.radial_gradient_background_subtraction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a template with a linear radial gradient from 0 to 1 inside r0,
+linear transition region for antialiasing between [r0 - delta/2, r0 + delta/2[,
+and a negative ring with value -1 in [r0 + delta/2, r_outer].</p>
+<p>The function accepts the radius for each pixel as a parameter so that a distorted version can
+be generated with the stretchY and angle parameters of <a class="reference internal" href="#libertem.masks.polar_map" title="libertem.masks.polar_map"><code class="xref py py-meth docutils literal notranslate"><span class="pre">polar_map()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>r</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – Map of radius for each pixel, typically 2D. This allows to work in distorted coordinate
+systems by assigning arbitrary radius values to each pixel.
+<a class="reference internal" href="#libertem.masks.polar_map" title="libertem.masks.polar_map"><code class="xref py py-meth docutils literal notranslate"><span class="pre">polar_map()</span></code></a> can generate elliptical maps as an example.</p></li>
+<li><p><strong>r0</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Inner radius to fill with a linear gradient in units of r</p></li>
+<li><p><strong>r_outer</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Outer radius of ring from r0 to fill with -1 in units of r</p></li>
+<li><p><strong>delta</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a><em>, </em><em>optional</em>) – Width of transition region between inner and outer in units of r
+with linear gradient for antialiasing or smoothening. Defaults to 1.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>NumPy numpy.ndarray with the same shape and type of r with mask values assigned as
+described in the description.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="libertem.masks.rectangular">
+<code class="sig-prename descclassname">libertem.masks.</code><code class="sig-name descname">rectangular</code><span class="sig-paren">(</span><em class="sig-param">X</em>, <em class="sig-param">Y</em>, <em class="sig-param">Width</em>, <em class="sig-param">Height</em>, <em class="sig-param">imageSizeX</em>, <em class="sig-param">imageSizeY</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/masks.html#rectangular"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.masks.rectangular" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make a rectangular mask as a 2D array of bool.
+:param X, Y: Centre point of the mask.
+:type X, Y: Corner coordinates
+:param imageSizeX, imageSizeY: Size of the image to be masked.
+:type imageSizeX, imageSizeY: int
+:param Width, Height:
+:type Width, Height: Width and Height of the rectangle</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Array with the shape (imageSizeX, imageSizeY) with the mask.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>Numpy 2D Array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="libertem.masks.ring">
+<code class="sig-prename descclassname">libertem.masks.</code><code class="sig-name descname">ring</code><span class="sig-paren">(</span><em class="sig-param">centerX</em>, <em class="sig-param">centerY</em>, <em class="sig-param">imageSizeX</em>, <em class="sig-param">imageSizeY</em>, <em class="sig-param">radius</em>, <em class="sig-param">radius_inner</em>, <em class="sig-param">antialiased=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/masks.html#ring"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.masks.ring" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make a ring mask as a double array.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>centreY</strong> (<em>centreX</em><em>,</em>) – Centre point of the mask.</p></li>
+<li><p><strong>imageSizeY</strong> (<em>imageSizeX</em><em>,</em>) – Size of the image to be masked.</p></li>
+<li><p><strong>radius</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Outer radius of the ring.</p></li>
+<li><p><strong>radius_inner</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Inner radius of the ring.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Array with the shape (imageSizeX, imageSizeY) with the mask.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Numpy 2D Array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="libertem.masks.sparse_circular_multi_stack">
+<code class="sig-prename descclassname">libertem.masks.</code><code class="sig-name descname">sparse_circular_multi_stack</code><span class="sig-paren">(</span><em class="sig-param">mask_index</em>, <em class="sig-param">centerX</em>, <em class="sig-param">centerY</em>, <em class="sig-param">imageSizeX</em>, <em class="sig-param">imageSizeY</em>, <em class="sig-param">radius</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/masks.html#sparse_circular_multi_stack"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.masks.sparse_circular_multi_stack" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="libertem.masks.sparse_template_multi_stack">
+<code class="sig-prename descclassname">libertem.masks.</code><code class="sig-name descname">sparse_template_multi_stack</code><span class="sig-paren">(</span><em class="sig-param">mask_index</em>, <em class="sig-param">offsetX</em>, <em class="sig-param">offsetY</em>, <em class="sig-param">template</em>, <em class="sig-param">imageSizeX</em>, <em class="sig-param">imageSizeY</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/masks.html#sparse_template_multi_stack"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.masks.sparse_template_multi_stack" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stamp the template in a multi-mask 3D stack at the positions indicated by
+mask_index, offsetY, offsetX. The function clips the bounding box as necessary.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="libertem.masks.to_dense">
+<code class="sig-prename descclassname">libertem.masks.</code><code class="sig-name descname">to_dense</code><span class="sig-paren">(</span><em class="sig-param">a</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/masks.html#to_dense"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.masks.to_dense" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="libertem.masks.to_sparse">
+<code class="sig-prename descclassname">libertem.masks.</code><code class="sig-name descname">to_sparse</code><span class="sig-paren">(</span><em class="sig-param">a</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/masks.html#to_sparse"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.masks.to_sparse" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html">GUI usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concepts.html">Concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../formats.html">Loading data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../udf.html">User-defined functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../applications.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../performance.html">Performance</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../debugging.html">Debugging</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="api.html">LiberTEM Context API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="udf.html">UDF API reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataset.html">Data Set API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="application.html">Application-specific API</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Mask creation and manipulation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="internals.html">Internal API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dask.html">Dask API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cluster-ds.html">Cluster data set</a></li>
+<li class="toctree-l2"><a class="reference internal" href="caching.html">Distributed caching layer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#indices-and-tables">Indices and tables</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tips.html">Tips and tricks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../why_python.html">Why Python?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../gsoc.html">GSoC 2019 ideas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../authorship.html">Authorship policy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../citing.html">Citing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledgments.html">Acknowledgments</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Reference</a><ul>
+      <li>Previous: <a href="app/holography.html" title="previous chapter">Off-axis electron holography</a></li>
+      <li>Next: <a href="internals.html" title="next chapter">Internal API</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, LiberTEM Authors.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/reference/masks.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

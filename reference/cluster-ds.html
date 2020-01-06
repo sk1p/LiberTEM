@@ -1,0 +1,305 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Cluster data set &#8212; LiberTEM 0.4.0.dev0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    <link rel="shortcut icon" href="../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Distributed caching layer" href="caching.html" />
+    <link rel="prev" title="Dask API" href="dask.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="cluster-data-set">
+<h1>Cluster data set<a class="headerlink" href="#cluster-data-set" title="Permalink to this headline">¶</a></h1>
+<p><code class="code docutils literal notranslate"><span class="pre">ClusterDataSet</span></code> is a distributed data set, storing individual partitions
+using raw binary files.</p>
+<span class="target" id="module-libertem.io.dataset.cluster"></span><dl class="class">
+<dt id="libertem.io.dataset.cluster.ClusterDSPartition">
+<em class="property">class </em><code class="sig-prename descclassname">libertem.io.dataset.cluster.</code><code class="sig-name descname">ClusterDSPartition</code><span class="sig-paren">(</span><em class="sig-param">path</em>, <em class="sig-param">workers</em>, <em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/io/dataset/cluster.html#ClusterDSPartition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.io.dataset.cluster.ClusterDSPartition" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="libertem.io.dataset.cluster.ClusterDSPartition.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">path</em>, <em class="sig-param">workers</em>, <em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/io/dataset/cluster.html#ClusterDSPartition.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.io.dataset.cluster.ClusterDSPartition.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="libertem.io.dataset.cluster.ClusterDSPartition.delete">
+<code class="sig-name descname">delete</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/io/dataset/cluster.html#ClusterDSPartition.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.io.dataset.cluster.ClusterDSPartition.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>delete this partition. needs to run on all nodes that have this partition</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="libertem.io.dataset.cluster.ClusterDSPartition.get_canonical_path">
+<code class="sig-name descname">get_canonical_path</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/io/dataset/cluster.html#ClusterDSPartition.get_canonical_path"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.io.dataset.cluster.ClusterDSPartition.get_canonical_path" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="libertem.io.dataset.cluster.ClusterDSPartition.get_locations">
+<code class="sig-name descname">get_locations</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/io/dataset/cluster.html#ClusterDSPartition.get_locations"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.io.dataset.cluster.ClusterDSPartition.get_locations" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="libertem.io.dataset.cluster.ClusterDSPartition.get_write_handle">
+<code class="sig-name descname">get_write_handle</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/io/dataset/cluster.html#ClusterDSPartition.get_write_handle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.io.dataset.cluster.ClusterDSPartition.get_write_handle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a handle to write to this partition. Current rules:</p>
+<ol class="arabic simple">
+<li><p>You can only write a complete partition at once, which is then immutable afterwards.
+If you want to change something, you need to write the whole partition again.</p></li>
+<li><p>Once the <cite>with</cite>-block is exited successfully, the data is written down to disk. If
+there is an error while writing the data, the partition will not be moved into its final
+place and it will be missing from the data set. There cannot be a “parially written”
+partition.</p></li>
+</ol>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">dest_part</span><span class="o">.</span><span class="n">get_write_handle</span><span class="p">()</span> <span class="k">as</span> <span class="n">wh</span><span class="p">:</span>  
+<span class="gp">... </span>    <span class="k">for</span> <span class="n">tile</span> <span class="ow">in</span> <span class="n">wh</span><span class="o">.</span><span class="n">write_tiles</span><span class="p">(</span><span class="n">source_part</span><span class="o">.</span><span class="n">get_tiles</span><span class="p">()):</span>
+<span class="gp">... </span>        <span class="k">pass</span>  <span class="c1"># do something with `tile`</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="libertem.io.dataset.cluster.ClusterDataSet">
+<em class="property">class </em><code class="sig-prename descclassname">libertem.io.dataset.cluster.</code><code class="sig-name descname">ClusterDataSet</code><span class="sig-paren">(</span><em class="sig-param">path</em>, <em class="sig-param">structure=None</em>, <em class="sig-param">enable_direct=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/io/dataset/cluster.html#ClusterDataSet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.io.dataset.cluster.ClusterDataSet" title="Permalink to this definition">¶</a></dt>
+<dd><p>ClusterDataSet: a distributed RAW data set</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>to be used for the cache, for live acquisition, and for simulation integration</p></li>
+<li><p>each node has a directory for a ClusterDataSet</p></li>
+<li><p>the directory contains partitions, each its own raw file</p></li>
+<li><p>information about the structure is saved as a json sidecar file</p></li>
+<li><p>A ClusterDataSet dataset can be incomplete, that is, it can miss complete partitions
+(but partitions themselves are guaranteed to be complete once they have their final filename)</p></li>
+<li><dl class="simple">
+<dt>use cases for incomplete datasets:</dt><dd><ul>
+<li><p>each node only caches the partitions it is responsible for</p></li>
+<li><p>partial acquisitions support</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p>missing partitions can later be written</p></li>
+<li><p>file names and structure/partitioning are deterministic</p></li>
+<li><p>assumption: all workers on a single host share the dataset</p></li>
+</ul>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – Absolute filesystem base path, pointing to an existing directory.
+Assumes a uniform setup (same absolute path used on all nodes)</p></li>
+<li><p><strong>enable_direct</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#bool" title="(in Python v3.7)"><em>bool</em></a>) – Enable direct I/O for reading. This bypasses the filesystem cache and is useful for
+systems with very fast I/O and for data sets that are much larger than the
+main memory. Support for direct I/O writing TODO.</p></li>
+<li><p><strong>structure</strong> (<a class="reference internal" href="dataset.html#libertem.io.dataset.base.PartitionStructure" title="libertem.io.dataset.base.PartitionStructure"><em>PartitionStructure</em></a>) – Partitioning structure instance. Must be specified when creating a new dataset.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="method">
+<dt id="libertem.io.dataset.cluster.ClusterDataSet.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">path</em>, <em class="sig-param">structure=None</em>, <em class="sig-param">enable_direct=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/io/dataset/cluster.html#ClusterDataSet.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.io.dataset.cluster.ClusterDataSet.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="libertem.io.dataset.cluster.ClusterDataSet.check_valid">
+<code class="sig-name descname">check_valid</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/io/dataset/cluster.html#ClusterDataSet.check_valid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.io.dataset.cluster.ClusterDataSet.check_valid" title="Permalink to this definition">¶</a></dt>
+<dd><p>check validity of the DataSet. this will be executed (after initialize) on a worker node.
+should raise DataSetException in case of errors, return True otherwise.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="libertem.io.dataset.cluster.ClusterDataSet.detect_params">
+<em class="property">classmethod </em><code class="sig-name descname">detect_params</code><span class="sig-paren">(</span><em class="sig-param">path</em>, <em class="sig-param">executor</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/io/dataset/cluster.html#ClusterDataSet.detect_params"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.io.dataset.cluster.ClusterDataSet.detect_params" title="Permalink to this definition">¶</a></dt>
+<dd><p>Guess if path can be opened using this DataSet implementation and
+detect parameters.</p>
+<p>returns dict of detected parameters if path matches this dataset type,
+returns False if path is most likely not of a matching type.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="libertem.io.dataset.cluster.ClusterDataSet.dtype">
+<em class="property">property </em><code class="sig-name descname">dtype</code><a class="headerlink" href="#libertem.io.dataset.cluster.ClusterDataSet.dtype" title="Permalink to this definition">¶</a></dt>
+<dd><p>the destination data type</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="libertem.io.dataset.cluster.ClusterDataSet.get_diagnostics">
+<code class="sig-name descname">get_diagnostics</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/io/dataset/cluster.html#ClusterDataSet.get_diagnostics"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.io.dataset.cluster.ClusterDataSet.get_diagnostics" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get relevant diagnostics for this dataset, as a list of
+dicts with keys name, value, where value may be string or
+a list of dicts itself. Subclasses should override this method.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="libertem.io.dataset.cluster.ClusterDataSet.get_msg_converter">
+<em class="property">classmethod </em><code class="sig-name descname">get_msg_converter</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/io/dataset/cluster.html#ClusterDataSet.get_msg_converter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.io.dataset.cluster.ClusterDataSet.get_msg_converter" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="libertem.io.dataset.cluster.ClusterDataSet.get_partitions">
+<code class="sig-name descname">get_partitions</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/io/dataset/cluster.html#ClusterDataSet.get_partitions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.io.dataset.cluster.ClusterDataSet.get_partitions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a generator over all Partitions in this DataSet. Should only
+be called on the master node.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="libertem.io.dataset.cluster.ClusterDataSet.initialize">
+<code class="sig-name descname">initialize</code><span class="sig-paren">(</span><em class="sig-param">executor</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/libertem/io/dataset/cluster.html#ClusterDataSet.initialize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#libertem.io.dataset.cluster.ClusterDataSet.initialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize is running on the master node, but we have
+access to the executor.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="libertem.io.dataset.cluster.ClusterDataSet.raw_dtype">
+<em class="property">property </em><code class="sig-name descname">raw_dtype</code><a class="headerlink" href="#libertem.io.dataset.cluster.ClusterDataSet.raw_dtype" title="Permalink to this definition">¶</a></dt>
+<dd><p>the underlying data type</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="libertem.io.dataset.cluster.ClusterDataSet.shape">
+<em class="property">property </em><code class="sig-name descname">shape</code><a class="headerlink" href="#libertem.io.dataset.cluster.ClusterDataSet.shape" title="Permalink to this definition">¶</a></dt>
+<dd><p>The shape of the DataSet, as it makes sense for the application domain
+(for example, 4D for pixelated STEM)</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../index.html">
+    <img class="logo" src="../_static/logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html">GUI usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../concepts.html">Concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../formats.html">Loading data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../udf.html">User-defined functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../applications.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../performance.html">Performance</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../debugging.html">Debugging</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="api.html">LiberTEM Context API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="udf.html">UDF API reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataset.html">Data Set API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="application.html">Application-specific API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="masks.html">Mask creation and manipulation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="internals.html">Internal API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dask.html">Dask API</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Cluster data set</a></li>
+<li class="toctree-l2"><a class="reference internal" href="caching.html">Distributed caching layer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#indices-and-tables">Indices and tables</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tips.html">Tips and tricks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../why_python.html">Why Python?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../gsoc.html">GSoC 2019 ideas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../authorship.html">Authorship policy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../citing.html">Citing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acknowledgments.html">Acknowledgments</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Reference</a><ul>
+      <li>Previous: <a href="dask.html" title="previous chapter">Dask API</a></li>
+      <li>Next: <a href="caching.html" title="next chapter">Distributed caching layer</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, LiberTEM Authors.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/reference/cluster-ds.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

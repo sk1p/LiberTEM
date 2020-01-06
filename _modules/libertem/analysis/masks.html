@@ -1,0 +1,260 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>libertem.analysis.masks &#8212; LiberTEM 0.4.0.dev0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    <link rel="shortcut icon" href="../../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for libertem.analysis.masks</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">libertem.viz</span> <span class="kn">import</span> <span class="n">visualize_simple</span>
+<span class="kn">from</span> <span class="nn">.base</span> <span class="kn">import</span> <span class="n">BaseAnalysis</span><span class="p">,</span> <span class="n">AnalysisResultSet</span><span class="p">,</span> <span class="n">AnalysisResult</span>
+<span class="kn">from</span> <span class="nn">libertem.job.masks</span> <span class="kn">import</span> <span class="n">ApplyMasksJob</span>
+
+
+<span class="k">class</span> <span class="nc">BaseMasksAnalysis</span><span class="p">(</span><span class="n">BaseAnalysis</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Base class for any masks-based analysis; you only need to implement</span>
+<span class="sd">    ``get_results`` and ``get_mask_factories``.</span>
+<span class="sd">    Overwrite  ``get_use_sparse`` to return True to calculate with sparse mask matrices.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">get_job</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">mask_factories</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_mask_factories</span><span class="p">()</span>
+        <span class="n">use_sparse</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_use_sparse</span><span class="p">()</span>
+        <span class="n">mask_count</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_preset_mask_count</span><span class="p">()</span>
+        <span class="n">mask_dtype</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_preset_mask_dtype</span><span class="p">()</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_preset_dtype</span><span class="p">()</span>
+        <span class="n">job</span> <span class="o">=</span> <span class="n">ApplyMasksJob</span><span class="p">(</span>
+            <span class="n">dataset</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="p">,</span>
+            <span class="n">mask_factories</span><span class="o">=</span><span class="n">mask_factories</span><span class="p">,</span>
+            <span class="n">use_sparse</span><span class="o">=</span><span class="n">use_sparse</span><span class="p">,</span>
+            <span class="n">mask_count</span><span class="o">=</span><span class="n">mask_count</span><span class="p">,</span>
+            <span class="n">mask_dtype</span><span class="o">=</span><span class="n">mask_dtype</span><span class="p">,</span>
+            <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">job</span>
+
+    <span class="k">def</span> <span class="nf">get_mask_factories</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">get_use_sparse</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;use_sparse&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_preset_mask_count</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;mask_count&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_preset_mask_dtype</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;mask_dtype&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_preset_dtype</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;dtype&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="MasksResultSet"><a class="viewcode-back" href="../../../reference/api.html#libertem.analysis.masks.MasksResultSet">[docs]</a><span class="k">class</span> <span class="nc">MasksResultSet</span><span class="p">(</span><span class="n">AnalysisResultSet</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Running a :class:`MasksAnalysis` via :meth:`libertem.api.Context.run` on a dataset</span>
+<span class="sd">    returns an instance of this class.</span>
+
+<span class="sd">    If any of the masks or the dataset contain complex numbers, the regular mask results</span>
+<span class="sd">    attributes carry the absolute value of the results, and additional attributes with real</span>
+<span class="sd">    part, imaginary part, phase and full complex result are available.</span>
+
+<span class="sd">    .. versionadded:: 0.3.0</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    mask_0, mask_1, ..., mask_&lt;n&gt; : libertem.analysis.base.AnalysisResult</span>
+<span class="sd">        For dataset and masks containing only real numbers:</span>
+<span class="sd">        Results of the element-wise multiplication and sum of each individual mask with</span>
+<span class="sd">        each detector frame. Each mask result has the shape of the navigation dimension.</span>
+<span class="sd">        These keys contain the absolute value of the result if dataset or masks contain</span>
+<span class="sd">        complex numbers.</span>
+<span class="sd">    mask_0, mask_0_real, mask_0_imag, mask_0_angle, mask_0_complex,\</span>
+<span class="sd">    mask_1, mask_1_real, ...,\</span>
+<span class="sd">    mask_&lt;n&gt;, ..., mask_&lt;n&gt;_complex : libertem.analysis.base.AnalysisResult</span>
+<span class="sd">        If masks or dataset contain complex numbers: Absolute, real part, imaginary part,</span>
+<span class="sd">        phase angle, complex result of the element-wise multiplication and sum of each individual</span>
+<span class="sd">        mask with each detector frame. Each mask result has the shape of the navigation dimension.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="SingleMaskResultSet"><a class="viewcode-back" href="../../../reference/api.html#libertem.analysis.masks.SingleMaskResultSet">[docs]</a><span class="k">class</span> <span class="nc">SingleMaskResultSet</span><span class="p">(</span><span class="n">AnalysisResultSet</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A number of Analyses that are based on applying a single mask create an instance of this class</span>
+<span class="sd">    as a result when executed via :meth:`libertem.api.Context.run`.</span>
+
+<span class="sd">    If the dataset contains complex numbers, the regular result attribute carries the</span>
+<span class="sd">    absolute value of the result, and additional attributes with real part, imaginary part,</span>
+<span class="sd">    phase and full complex result are available.</span>
+
+<span class="sd">    .. versionadded:: 0.3.0</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    intensity : libertem.analysis.base.AnalysisResult</span>
+<span class="sd">        Sum of the selected region for each detector frame, with shape of</span>
+<span class="sd">        the navigation dimension. Absolute of the result if the dataset or mask contains</span>
+<span class="sd">        complex numbers.</span>
+<span class="sd">    intensity_real : libertem.analysis.base.AnalysisResult</span>
+<span class="sd">        Real part of the sum of the selected region. This is only available if the dataset</span>
+<span class="sd">        or mask contains complex numbers.</span>
+<span class="sd">    intensity_imag : libertem.analysis.base.AnalysisResult</span>
+<span class="sd">        Imaginary part of the sum of the selected region. This is only available if the dataset</span>
+<span class="sd">        contains complex numbers.</span>
+<span class="sd">    intensity_angle : libertem.analysis.base.AnalysisResult</span>
+<span class="sd">        Phase angle of the sum of the selected region. This is only available if the dataset</span>
+<span class="sd">        or mask contains complex numbers.</span>
+<span class="sd">    intensity_complex : libertem.analysis.base.AnalysisResult</span>
+<span class="sd">        Complex result of the sum of the selected region. This is only available if the dataset</span>
+<span class="sd">        or mask contains complex numbers.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">pass</span></div>
+
+
+<span class="k">class</span> <span class="nc">MasksAnalysis</span><span class="p">(</span><span class="n">BaseMasksAnalysis</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">get_mask_factories</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;factories&#39;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">get_results</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">job_results</span><span class="p">):</span>
+        <span class="n">shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">nav</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">job_results</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s1">&#39;c&#39;</span><span class="p">:</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">job_result</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">job_results</span><span class="p">):</span>
+                <span class="n">results</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">get_complex_results</span><span class="p">(</span>
+                        <span class="n">job_result</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">shape</span><span class="p">),</span>
+                        <span class="n">key_prefix</span><span class="o">=</span><span class="s2">&quot;mask_</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">idx</span><span class="p">,</span>
+                        <span class="n">title</span><span class="o">=</span><span class="s2">&quot;mask </span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">idx</span><span class="p">,</span>
+                        <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;integrated intensity for mask </span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">idx</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">return</span> <span class="n">MasksResultSet</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">MasksResultSet</span><span class="p">([</span>
+            <span class="n">AnalysisResult</span><span class="p">(</span>
+                <span class="n">raw_data</span><span class="o">=</span><span class="n">mask_result</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">shape</span><span class="p">),</span>
+                <span class="n">visualized</span><span class="o">=</span><span class="n">visualize_simple</span><span class="p">(</span><span class="n">mask_result</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">shape</span><span class="p">)),</span>
+                <span class="n">key</span><span class="o">=</span><span class="s2">&quot;mask_</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">i</span><span class="p">,</span>
+                <span class="n">title</span><span class="o">=</span><span class="s2">&quot;mask </span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">i</span><span class="p">,</span>
+                <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;integrated intensity for mask </span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">i</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">mask_result</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">job_results</span><span class="p">)</span>
+        <span class="p">])</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../../../index.html">
+    <img class="logo" src="../../../_static/logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">GUI usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../concepts.html">Concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../formats.html">Loading data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../udf.html">User-defined functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../applications.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../performance.html">Performance</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../debugging.html">Debugging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference/index.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tips.html">Tips and tricks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../why_python.html">Why Python?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../gsoc.html">GSoC 2019 ideas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../authorship.html">Authorship policy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../citing.html">Citing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../acknowledgments.html">Acknowledgments</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, LiberTEM Authors.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

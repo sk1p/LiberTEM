@@ -1,0 +1,621 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>libertem.io.dataset.mib &#8212; LiberTEM 0.4.0.dev0 documentation</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    <link rel="shortcut icon" href="../../../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for libertem.io.dataset.mib</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">io</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">glob</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">libertem.common</span> <span class="kn">import</span> <span class="n">Shape</span>
+<span class="kn">from</span> <span class="nn">libertem.web.messages</span> <span class="kn">import</span> <span class="n">MessageConverter</span>
+<span class="kn">from</span> <span class="nn">.base</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">DataSet</span><span class="p">,</span> <span class="n">DataSetException</span><span class="p">,</span> <span class="n">DataSetMeta</span><span class="p">,</span>
+    <span class="n">Partition3D</span><span class="p">,</span> <span class="n">File3D</span><span class="p">,</span> <span class="n">FileSet3D</span>
+<span class="p">)</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">MIBDatasetParams</span><span class="p">(</span><span class="n">MessageConverter</span><span class="p">):</span>
+    <span class="n">SCHEMA</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;$schema&quot;</span><span class="p">:</span> <span class="s2">&quot;http://json-schema.org/draft-07/schema#&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;$id&quot;</span><span class="p">:</span> <span class="s2">&quot;http://libertem.org/MIBDatasetParams.schema.json&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;MIBDatasetParams&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;object&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;properties&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;const&quot;</span><span class="p">:</span> <span class="s2">&quot;MIB&quot;</span><span class="p">},</span>
+            <span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;string&quot;</span><span class="p">},</span>
+            <span class="s2">&quot;scan_size&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;array&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;items&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;number&quot;</span><span class="p">,</span> <span class="s2">&quot;minimum&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span>
+                <span class="s2">&quot;minItems&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+                <span class="s2">&quot;maxItems&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="s2">&quot;tileshape&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;array&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;items&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;number&quot;</span><span class="p">,</span> <span class="s2">&quot;minimum&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span>
+                <span class="s2">&quot;minItems&quot;</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span>
+                <span class="s2">&quot;maxItems&quot;</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span>
+            <span class="p">},</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;required&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">,</span> <span class="s2">&quot;path&quot;</span><span class="p">],</span>
+    <span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">convert_to_python</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">raw_data</span><span class="p">):</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="n">raw_data</span><span class="p">[</span><span class="s2">&quot;path&quot;</span><span class="p">],</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="s2">&quot;scan_size&quot;</span> <span class="ow">in</span> <span class="n">raw_data</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;scan_size&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">raw_data</span><span class="p">[</span><span class="s2">&quot;scan_size&quot;</span><span class="p">])</span>
+        <span class="k">if</span> <span class="s2">&quot;tileshape&quot;</span> <span class="ow">in</span> <span class="n">raw_data</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;tileshape&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">raw_data</span><span class="p">[</span><span class="s2">&quot;tileshape&quot;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">data</span>
+
+
+<span class="k">def</span> <span class="nf">read_hdr_file</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;HDR&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;End</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">):</span>
+                <span class="k">continue</span>
+            <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">k</span> <span class="o">=</span> <span class="n">k</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">)</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+    <span class="k">return</span> <span class="n">result</span>
+
+
+<span class="k">def</span> <span class="nf">is_valid_hdr</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">line</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;HDR&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">scan_size_from_hdr</span><span class="p">(</span><span class="n">hdr</span><span class="p">):</span>
+    <span class="n">num_frames</span><span class="p">,</span> <span class="n">scan_x</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">hdr</span><span class="p">[</span><span class="s1">&#39;Frames in Acquisition (Number)&#39;</span><span class="p">]),</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">hdr</span><span class="p">[</span><span class="s1">&#39;Frames per Trigger (Number)&#39;</span><span class="p">])</span>
+    <span class="p">)</span>
+    <span class="n">scan_size</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_frames</span> <span class="o">//</span> <span class="n">scan_x</span><span class="p">,</span> <span class="n">scan_x</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">scan_size</span>
+
+
+<span class="k">class</span> <span class="nc">MIBFile</span><span class="p">(</span><span class="n">File3D</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">fields</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sequence_start</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">path</span>
+        <span class="k">if</span> <span class="n">fields</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_fields</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_fields</span> <span class="o">=</span> <span class="n">fields</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sequence_start</span> <span class="o">=</span> <span class="n">sequence_start</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_get_np_dtype</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dtype</span><span class="p">):</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">dtype</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="n">num_bits</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">dtype</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+        <span class="k">if</span> <span class="n">dtype</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;u&quot;</span><span class="p">:</span>
+            <span class="n">num_bytes</span> <span class="o">=</span> <span class="n">num_bits</span> <span class="o">//</span> <span class="mi">8</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="s2">&quot;&gt;u</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">num_bytes</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">dtype</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;r&quot;</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">num_bits</span> <span class="o">==</span> <span class="mi">64</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="s2">&quot;uint8&quot;</span><span class="p">)</span>  <span class="c1"># the dtype after np.unpackbits</span>
+
+    <span class="k">def</span> <span class="nf">read_header</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">with</span> <span class="n">io</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">file</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;ascii&quot;</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">header</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+            <span class="n">filesize</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">fstat</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">fileno</span><span class="p">())</span><span class="o">.</span><span class="n">st_size</span>
+        <span class="n">parts</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="n">mib_kind</span> <span class="o">=</span> <span class="n">dtype</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">image_size</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">5</span><span class="p">]),</span> <span class="nb">int</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">4</span><span class="p">]))</span>
+        <span class="n">header_size_bytes</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">mib_kind</span> <span class="o">==</span> <span class="s2">&quot;u&quot;</span><span class="p">:</span>
+            <span class="n">bytes_per_pixel</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">6</span><span class="p">][</span><span class="mi">1</span><span class="p">:])</span> <span class="o">//</span> <span class="mi">8</span>
+            <span class="n">image_size_bytes</span> <span class="o">=</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">bytes_per_pixel</span>
+        <span class="k">elif</span> <span class="n">mib_kind</span> <span class="o">==</span> <span class="s2">&quot;r&quot;</span><span class="p">:</span>
+            <span class="n">bytes_per_pixel</span> <span class="o">=</span> <span class="mi">1</span>  <span class="c1"># after np.unpackbits</span>
+            <span class="n">image_size_bytes</span> <span class="o">=</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">//</span> <span class="mi">8</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;unknown kind: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">mib_kind</span><span class="p">)</span>
+
+        <span class="n">num_images</span> <span class="o">=</span> <span class="n">filesize</span> <span class="o">//</span> <span class="p">(</span>
+            <span class="n">image_size_bytes</span> <span class="o">+</span> <span class="n">header_size_bytes</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fields</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;header_size_bytes&#39;</span><span class="p">:</span> <span class="n">header_size_bytes</span><span class="p">,</span>
+            <span class="s1">&#39;dtype&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_np_dtype</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">6</span><span class="p">]),</span>
+            <span class="s1">&#39;mib_dtype&#39;</span><span class="p">:</span> <span class="n">dtype</span><span class="p">,</span>
+            <span class="s1">&#39;mib_kind&#39;</span><span class="p">:</span> <span class="n">mib_kind</span><span class="p">,</span>
+            <span class="s1">&#39;bytes_per_pixel&#39;</span><span class="p">:</span> <span class="n">bytes_per_pixel</span><span class="p">,</span>
+            <span class="s1">&#39;image_size&#39;</span><span class="p">:</span> <span class="n">image_size</span><span class="p">,</span>
+            <span class="s1">&#39;sequence_first_image&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+            <span class="s1">&#39;filesize&#39;</span><span class="p">:</span> <span class="n">filesize</span><span class="p">,</span>
+            <span class="s1">&#39;num_images&#39;</span><span class="p">:</span> <span class="n">num_images</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fields</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">num_frames</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;num_images&#39;</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">start_idx</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;sequence_first_image&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sequence_start</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">fields</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fields</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">read_header</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fields</span>
+
+    <span class="k">def</span> <span class="nf">open</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fh</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fh</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fh</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">_frames_read_int</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">num</span><span class="p">,</span> <span class="n">method</span><span class="p">):</span>
+        <span class="n">bpp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;bytes_per_pixel&#39;</span><span class="p">]</span>
+        <span class="n">hsize</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;header_size_bytes&#39;</span><span class="p">]</span>
+        <span class="n">hsize_px</span> <span class="o">=</span> <span class="n">hsize</span> <span class="o">//</span> <span class="n">bpp</span>
+        <span class="k">assert</span> <span class="n">hsize</span> <span class="o">%</span> <span class="n">bpp</span> <span class="o">==</span> <span class="mi">0</span>
+        <span class="n">size_px</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;image_size&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;image_size&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">size</span> <span class="o">=</span> <span class="n">size_px</span> <span class="o">*</span> <span class="n">bpp</span>  <span class="c1"># bytes</span>
+        <span class="n">imagesize_incl_header</span> <span class="o">=</span> <span class="n">size</span> <span class="o">+</span> <span class="n">hsize</span>  <span class="c1"># bytes</span>
+
+        <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;read&quot;</span><span class="p">:</span>
+            <span class="n">readsize</span> <span class="o">=</span> <span class="n">imagesize_incl_header</span> <span class="o">*</span> <span class="n">num</span>
+            <span class="n">buf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_buffer</span><span class="p">(</span><span class="s2">&quot;_frames_read_int&quot;</span><span class="p">,</span> <span class="n">readsize</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_fh</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">start</span> <span class="o">*</span> <span class="n">imagesize_incl_header</span><span class="p">)</span>
+            <span class="n">bytes_read</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fh</span><span class="o">.</span><span class="n">readinto</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="n">bytes_read</span> <span class="o">==</span> <span class="n">readsize</span>
+            <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;dtype&#39;</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;mmap&quot;</span><span class="p">:</span>
+            <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">memmap</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;dtype&#39;</span><span class="p">],</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span>
+                            <span class="n">offset</span><span class="o">=</span><span class="n">start</span> <span class="o">*</span> <span class="n">imagesize_incl_header</span><span class="p">)</span>
+            <span class="c1"># limit to number of frames to read</span>
+            <span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[:</span><span class="n">num</span> <span class="o">*</span> <span class="p">(</span><span class="n">size_px</span> <span class="o">+</span> <span class="n">hsize_px</span><span class="p">)]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;unknown method: </span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">method</span><span class="p">)</span>
+
+        <span class="c1"># reshape (num_frames, pixels) incl. header</span>
+        <span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">num</span><span class="p">,</span> <span class="n">size_px</span> <span class="o">+</span> <span class="n">hsize_px</span><span class="p">))</span>
+        <span class="c1"># cut off headers</span>
+        <span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[:,</span> <span class="n">hsize_px</span><span class="p">:]</span>
+        <span class="k">return</span> <span class="n">arr</span>
+
+    <span class="k">def</span> <span class="nf">_frames_read_bits</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">num</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        read frames for type r64, that is, pixels are bit-packed into big-endian</span>
+<span class="sd">        64bit integers</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">hsize_px</span> <span class="o">=</span> <span class="mi">8</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;header_size_bytes&#39;</span><span class="p">]</span>  <span class="c1"># unpacked header size</span>
+        <span class="n">size_px</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;image_size&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;image_size&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">size</span> <span class="o">=</span> <span class="n">size_px</span> <span class="o">//</span> <span class="mi">8</span>
+        <span class="n">hsize</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;header_size_bytes&#39;</span><span class="p">]</span>
+        <span class="n">imagesize_incl_header</span> <span class="o">=</span> <span class="n">size</span> <span class="o">+</span> <span class="n">hsize</span>
+        <span class="n">readsize</span> <span class="o">=</span> <span class="n">imagesize_incl_header</span> <span class="o">*</span> <span class="n">num</span>
+        <span class="n">buf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_buffer</span><span class="p">(</span><span class="s2">&quot;_frames_read_bits&quot;</span><span class="p">,</span> <span class="n">readsize</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fh</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">start</span> <span class="o">*</span> <span class="n">imagesize_incl_header</span><span class="p">)</span>
+        <span class="n">bytes_read</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fh</span><span class="o">.</span><span class="n">readinto</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">bytes_read</span> <span class="o">==</span> <span class="n">readsize</span>
+        <span class="n">raw_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;u1&quot;</span><span class="p">)</span>
+        <span class="n">unpacked</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unpackbits</span><span class="p">(</span><span class="n">raw_data</span><span class="p">)</span>
+
+        <span class="c1"># reshape (num_frames, pixels) incl. header</span>
+        <span class="n">unpacked</span> <span class="o">=</span> <span class="n">unpacked</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">num</span><span class="p">,</span> <span class="n">size_px</span> <span class="o">+</span> <span class="n">hsize_px</span><span class="p">))</span>
+        <span class="c1"># cut off headers</span>
+        <span class="n">unpacked</span> <span class="o">=</span> <span class="n">unpacked</span><span class="p">[:,</span> <span class="n">hsize_px</span><span class="p">:]</span>
+
+        <span class="n">arr</span> <span class="o">=</span> <span class="n">unpacked</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">num</span> <span class="o">*</span> <span class="mi">4</span> <span class="o">*</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">64</span><span class="p">))[:,</span> <span class="p">::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">num</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">256</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">arr</span>
+
+    <span class="k">def</span> <span class="nf">_frames_read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">num</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;read&quot;</span><span class="p">):</span>
+        <span class="n">mib_kind</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;mib_kind&#39;</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">mib_kind</span> <span class="o">==</span> <span class="s2">&quot;r&quot;</span><span class="p">:</span>
+            <span class="n">arr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_frames_read_bits</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">num</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">mib_kind</span> <span class="o">==</span> <span class="s2">&quot;u&quot;</span><span class="p">:</span>
+            <span class="n">arr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_frames_read_int</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">num</span><span class="p">,</span> <span class="n">method</span><span class="p">)</span>
+
+        <span class="c1"># reshape to (num_frames, pixels_y, pixels_x)</span>
+        <span class="k">return</span> <span class="n">arr</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">num</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;image_size&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;image_size&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">]))</span>
+
+    <span class="k">def</span> <span class="nf">readinto</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">crop_to</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Read a number of frames into an existing buffer, skipping the headers.</span>
+
+<span class="sd">        Note: this method is not thread safe!</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        stop : int</span>
+<span class="sd">            end index</span>
+<span class="sd">        start : int</span>
+<span class="sd">            index of first frame to read</span>
+<span class="sd">        out : buffer</span>
+<span class="sd">            output buffer that should fit `stop - start` frames</span>
+<span class="sd">        crop_to : Slice</span>
+<span class="sd">            crop to the signal part of this Slice</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">num</span> <span class="o">=</span> <span class="n">stop</span> <span class="o">-</span> <span class="n">start</span>
+        <span class="n">frames</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_frames_read</span><span class="p">(</span><span class="n">num</span><span class="o">=</span><span class="n">num</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;read&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">crop_to</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">frames</span> <span class="o">=</span> <span class="n">frames</span><span class="p">[(</span><span class="o">...</span><span class="p">,)</span> <span class="o">+</span> <span class="n">crop_to</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">sig_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)]</span>
+        <span class="n">out</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">frames</span>
+        <span class="k">return</span> <span class="n">out</span>
+
+
+<span class="k">class</span> <span class="nc">MIBFileSet</span><span class="p">(</span><span class="n">FileSet3D</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+
+<div class="viewcode-block" id="MIBDataSet"><a class="viewcode-back" href="../../../../reference/dataset.html#libertem.io.dataset.mib.MIBDataSet">[docs]</a><span class="k">class</span> <span class="nc">MIBDataSet</span><span class="p">(</span><span class="n">DataSet</span><span class="p">):</span>
+    <span class="c1"># FIXME include sample file for doctest, see Issue #86</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    MIB data sets consist of one or more `.mib` files, and optionally</span>
+<span class="sd">    a `.hdr` file. The HDR file is used to automatically set the</span>
+<span class="sd">    `scan_size` parameter from the fields &quot;Frames per Trigger&quot; and &quot;Frames</span>
+<span class="sd">    in Acquisition.&quot; When loading a MIB data set, you can either specify</span>
+<span class="sd">    the path to the HDR file, or choose one of the MIB files. The MIB files</span>
+<span class="sd">    are assumed to follow a naming pattern of some non-numerical prefix,</span>
+<span class="sd">    and a sequential numerical suffix.</span>
+
+<span class="sd">    Note that, as of the current version, no gain correction or hot/cold pixel</span>
+<span class="sd">    removal is done yet: processing is done on the RAW data, though you can do</span>
+<span class="sd">    pre-processing in your own UDF.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    &gt;&gt;&gt; # both examples look for files matching /path/to/default*.mib:</span>
+<span class="sd">    &gt;&gt;&gt; ds1 = ctx.load(&quot;mib&quot;, path=&quot;/path/to/default.hdr&quot;)  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; ds2 = ctx.load(&quot;mib&quot;, path=&quot;/path/to/default64.mib&quot;)  # doctest: +SKIP</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path: str</span>
+<span class="sd">        Path to either the .hdr file or one of the .mib files</span>
+
+<span class="sd">    tileshape: tuple of int, optional</span>
+<span class="sd">        Tuning parameter, specifying the size of the smallest data unit</span>
+<span class="sd">        we are reading and working on. Will be automatically determined</span>
+<span class="sd">        if left None.</span>
+
+<span class="sd">    scan_size: tuple of int, optional</span>
+<span class="sd">        A tuple (y, x) that specifies the size of the scanned region. It is</span>
+<span class="sd">        automatically read from the .hdr file if you specify one as `path`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">tileshape</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">scan_size</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sig_dims</span> <span class="o">=</span> <span class="mi">2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_path</span> <span class="o">=</span> <span class="n">path</span>
+        <span class="k">if</span> <span class="n">tileshape</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">tileshape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">256</span><span class="p">)</span>
+        <span class="n">tileshape</span> <span class="o">=</span> <span class="n">Shape</span><span class="p">(</span><span class="n">tileshape</span><span class="p">,</span> <span class="n">sig_dims</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_sig_dims</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tileshape</span> <span class="o">=</span> <span class="n">tileshape</span>
+        <span class="k">if</span> <span class="n">scan_size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">scan_size</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">scan_size</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.hdr&quot;</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;either scan_size needs to be passed, or path needs to point to a .hdr file&quot;</span>
+                <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_scan_size</span> <span class="o">=</span> <span class="n">scan_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_filename_cache</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_files_sorted</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="c1"># ._preread_headers() calls ._files() which passes the cached headers down to MIBFile,</span>
+        <span class="c1"># if they exist. So we need to make sure to initialize self._headers</span>
+        <span class="c1"># before calling _preread_headers!</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_headers</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_meta</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_total_filesize</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sequence_start</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">_do_initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_headers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_preread_headers</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_files_sorted</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_files</span><span class="p">(),</span>
+                                         <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">f</span><span class="p">:</span> <span class="n">f</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;sequence_first_image&#39;</span><span class="p">]))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">first_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_files_sorted</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DataSetException</span><span class="p">(</span><span class="s2">&quot;no files found&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scan_size</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">hdr</span> <span class="o">=</span> <span class="n">read_hdr_file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_path</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_scan_size</span> <span class="o">=</span> <span class="n">scan_size_from_hdr</span><span class="p">(</span><span class="n">hdr</span><span class="p">)</span>
+        <span class="n">shape</span> <span class="o">=</span> <span class="n">Shape</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_scan_size</span> <span class="o">+</span> <span class="n">first_file</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;image_size&#39;</span><span class="p">],</span>
+            <span class="n">sig_dims</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_sig_dims</span>
+        <span class="p">)</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">first_file</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;dtype&#39;</span><span class="p">]</span>
+        <span class="n">meta</span> <span class="o">=</span> <span class="n">DataSetMeta</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">,</span> <span class="n">raw_dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">iocaps</span><span class="o">=</span><span class="p">{</span>
+            <span class="s2">&quot;FRAME_CROPS&quot;</span><span class="p">,</span> <span class="s2">&quot;MMAP&quot;</span><span class="p">,</span> <span class="s2">&quot;FULL_FRAMES&quot;</span>
+        <span class="p">})</span>
+        <span class="k">if</span> <span class="n">first_file</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;mib_dtype&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;r64&quot;</span><span class="p">:</span>
+            <span class="n">meta</span><span class="o">.</span><span class="n">iocaps</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s2">&quot;MMAP&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_meta</span> <span class="o">=</span> <span class="n">meta</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_total_filesize</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">stat</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">st_size</span>
+            <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_filenames</span><span class="p">()</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sequence_start</span> <span class="o">=</span> <span class="n">first_file</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;sequence_first_image&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_files_sorted</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_files</span><span class="p">(),</span>
+                                         <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">f</span><span class="p">:</span> <span class="n">f</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;sequence_first_image&#39;</span><span class="p">]))</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">executor</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">executor</span><span class="o">.</span><span class="n">run_function</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_do_initialize</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_diagnostics</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">first_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_files_sorted</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Data type&quot;</span><span class="p">,</span>
+             <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">first_file</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;mib_dtype&#39;</span><span class="p">])},</span>
+        <span class="p">]</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">get_msg_converter</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">MIBDatasetParams</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">detect_params</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">executor</span><span class="p">):</span>
+        <span class="n">pathlow</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">pathlow</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.mib&quot;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">{</span>
+                <span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="n">path</span><span class="p">,</span>
+                <span class="s2">&quot;tileshape&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">256</span><span class="p">),</span>
+            <span class="p">}</span>
+        <span class="k">elif</span> <span class="n">pathlow</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.hdr&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">executor</span><span class="o">.</span><span class="n">run_function</span><span class="p">(</span><span class="n">is_valid_hdr</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+            <span class="n">hdr</span> <span class="o">=</span> <span class="n">executor</span><span class="o">.</span><span class="n">run_function</span><span class="p">(</span><span class="n">read_hdr_file</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+            <span class="n">scan_size</span> <span class="o">=</span> <span class="n">scan_size_from_hdr</span><span class="p">(</span><span class="n">hdr</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">{</span>
+                <span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="n">path</span><span class="p">,</span>
+                <span class="s2">&quot;tileshape&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">256</span><span class="p">),</span>
+                <span class="s2">&quot;scan_size&quot;</span><span class="p">:</span> <span class="n">scan_size</span><span class="p">,</span>
+            <span class="p">}</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="k">def</span> <span class="nf">_preread_headers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_files</span><span class="p">():</span>
+            <span class="n">res</span><span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">path</span><span class="p">]</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">fields</span>
+        <span class="k">return</span> <span class="n">res</span>
+
+    <span class="k">def</span> <span class="nf">_filenames</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_filename_cache</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_filename_cache</span>
+        <span class="n">path</span><span class="p">,</span> <span class="n">ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_path</span><span class="p">)</span>
+        <span class="n">ext</span> <span class="o">=</span> <span class="n">ext</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">ext</span> <span class="o">==</span> <span class="s1">&#39;.mib&#39;</span><span class="p">:</span>
+            <span class="n">pattern</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">*.mib&quot;</span> <span class="o">%</span> <span class="p">(</span>
+                <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;[0-9]+$&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">ext</span> <span class="o">==</span> <span class="s1">&#39;.hdr&#39;</span><span class="p">:</span>
+            <span class="n">pattern</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">*.mib&quot;</span> <span class="o">%</span> <span class="n">path</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DataSetException</span><span class="p">(</span><span class="s2">&quot;unknown extension&quot;</span><span class="p">)</span>
+        <span class="n">fns</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_filename_cache</span> <span class="o">=</span> <span class="n">fns</span>
+        <span class="k">return</span> <span class="n">fns</span>
+
+    <span class="k">def</span> <span class="nf">_files</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_filenames</span><span class="p">():</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="n">MIBFile</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">fields</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">path</span><span class="p">),</span>
+                        <span class="n">sequence_start</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_sequence_start</span><span class="p">)</span>
+            <span class="k">yield</span> <span class="n">f</span>
+
+    <span class="k">def</span> <span class="nf">_num_images</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;num_images&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_files</span><span class="p">())</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">dtype</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_meta</span><span class="o">.</span><span class="n">raw_dtype</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">shape</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        the 4D shape imprinted by number of images and scan_size</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_meta</span><span class="o">.</span><span class="n">shape</span>
+
+    <span class="k">def</span> <span class="nf">check_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scan_size</span>
+            <span class="n">num_images</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_images</span><span class="p">()</span>
+            <span class="c1"># FIXME: read hdr file and check if num images matches the number there</span>
+            <span class="k">if</span> <span class="n">s</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">num_images</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">DataSetException</span><span class="p">(</span>
+                    <span class="s2">&quot;scan_size (</span><span class="si">%r</span><span class="s2">) does not match number of images (</span><span class="si">%d</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="p">(</span>
+                        <span class="n">s</span><span class="p">,</span> <span class="n">num_images</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tileshape</span><span class="o">.</span><span class="n">sig</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">sig</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">DataSetException</span><span class="p">(</span>
+                    <span class="s2">&quot;MIB only supports tileshapes that match whole frames, </span><span class="si">%r</span><span class="s2"> != </span><span class="si">%r</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_tileshape</span><span class="o">.</span><span class="n">sig</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">sig</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tileshape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">DataSetException</span><span class="p">(</span>
+                    <span class="s2">&quot;MIB only supports tileshapes that don&#39;t cross rows&quot;</span>
+                <span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">IOError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">,</span> <span class="ne">KeyError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DataSetException</span><span class="p">(</span><span class="s2">&quot;invalid dataset: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_cache_key</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_path</span><span class="p">,</span>
+            <span class="c1"># shape is included here because the structure will be invalid if you open</span>
+            <span class="c1"># the same .mib file with a different scan_size; should be no issue if you</span>
+            <span class="c1"># open via the .hdr file</span>
+            <span class="s2">&quot;shape&quot;</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">_get_fileset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sequence_start</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">MIBFileSet</span><span class="p">(</span><span class="n">files</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_files_sorted</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_num_partitions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        returns the number of partitions the dataset should be split into</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># let&#39;s try to aim for 512MB (converted float data) per partition</span>
+        <span class="n">partition_size</span> <span class="o">=</span> <span class="mi">512</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">/</span> <span class="mi">4</span>
+        <span class="n">first_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_files_sorted</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">first_file</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;mib_kind&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;r&quot;</span><span class="p">:</span>
+            <span class="n">partition_size</span> <span class="o">/=</span> <span class="mi">4</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">bpp</span> <span class="o">=</span> <span class="n">first_file</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;bytes_per_pixel&#39;</span><span class="p">]</span>
+            <span class="n">partition_size</span> <span class="o">/=</span> <span class="n">bpp</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cores</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_total_filesize</span> <span class="o">//</span> <span class="nb">int</span><span class="p">(</span><span class="n">partition_size</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">res</span>
+
+    <span class="k">def</span> <span class="nf">get_partitions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">fileset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_fileset</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">part_slice</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span> <span class="ow">in</span> <span class="n">Partition3D</span><span class="o">.</span><span class="n">make_slices</span><span class="p">(</span>
+                <span class="n">shape</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
+                <span class="n">num_partitions</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_num_partitions</span><span class="p">()):</span>
+            <span class="k">yield</span> <span class="n">Partition3D</span><span class="p">(</span>
+                <span class="n">meta</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_meta</span><span class="p">,</span>
+                <span class="n">partition_slice</span><span class="o">=</span><span class="n">part_slice</span><span class="p">,</span>
+                <span class="n">fileset</span><span class="o">=</span><span class="n">fileset</span><span class="o">.</span><span class="n">get_for_range</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">),</span>
+                <span class="n">start_frame</span><span class="o">=</span><span class="n">start</span><span class="p">,</span>
+                <span class="n">num_frames</span><span class="o">=</span><span class="n">stop</span> <span class="o">-</span> <span class="n">start</span><span class="p">,</span>
+                <span class="n">stackheight</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_tileshape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tileshape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;&lt;MIBDataSet of </span><span class="si">%s</span><span class="s2"> shape=</span><span class="si">%s</span><span class="s2">&gt;&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../../../../index.html">
+    <img class="logo" src="../../../../_static/logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../usage.html">GUI usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../concepts.html">Concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../formats.html">Loading data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../udf.html">User-defined functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../applications.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../performance.html">Performance</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../debugging.html">Debugging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../reference/index.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../tips.html">Tips and tricks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../why_python.html">Why Python?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../gsoc.html">GSoC 2019 ideas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../authorship.html">Authorship policy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../citing.html">Citing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../acknowledgments.html">Acknowledgments</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, LiberTEM Authors.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

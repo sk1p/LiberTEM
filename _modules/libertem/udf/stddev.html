@@ -1,0 +1,324 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>libertem.udf.stddev &#8212; LiberTEM 0.4.0.dev0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    <link rel="shortcut icon" href="../../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for libertem.udf.stddev</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">collections</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">libertem.udf</span> <span class="kn">import</span> <span class="n">UDF</span>
+
+
+<span class="n">VariancePart</span> <span class="o">=</span> <span class="n">collections</span><span class="o">.</span><span class="n">namedtuple</span><span class="p">(</span><span class="s1">&#39;VariancePart&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;var&#39;</span><span class="p">,</span> <span class="s1">&#39;sum_im&#39;</span><span class="p">,</span> <span class="s1">&#39;N&#39;</span><span class="p">])</span>
+
+
+<span class="k">def</span> <span class="nf">merge</span><span class="p">(</span><span class="n">p0</span><span class="p">,</span> <span class="n">p1</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Given two sets of partitions, with sum of frames</span>
+<span class="sd">    and sum of variances, compute joint sum of frames</span>
+<span class="sd">    and sum of variances using one pass algorithm</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    p0</span>
+<span class="sd">        Contains information about the first partition, including</span>
+<span class="sd">        sum of variances, sum of pixels, and number of frames used</span>
+
+<span class="sd">    p1</span>
+<span class="sd">        Contains information about the second partition, including</span>
+<span class="sd">        sum of variances, sum of pixels, and number of frames used</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    VariancePart</span>
+<span class="sd">        colletions.namedtuple object that contains information about</span>
+<span class="sd">        the merged partitions, including sum of variances,</span>
+<span class="sd">        sum of pixels, and number of frames used</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">p0</span><span class="o">.</span><span class="n">N</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">p1</span>
+    <span class="n">N</span> <span class="o">=</span> <span class="n">p0</span><span class="o">.</span><span class="n">N</span> <span class="o">+</span> <span class="n">p1</span><span class="o">.</span><span class="n">N</span>
+
+    <span class="c1"># compute mean for each partitions</span>
+    <span class="n">mean_A</span> <span class="o">=</span> <span class="p">(</span><span class="n">p0</span><span class="o">.</span><span class="n">sum_im</span> <span class="o">/</span> <span class="n">p0</span><span class="o">.</span><span class="n">N</span><span class="p">)</span>
+    <span class="n">mean_B</span> <span class="o">=</span> <span class="p">(</span><span class="n">p1</span><span class="o">.</span><span class="n">sum_im</span> <span class="o">/</span> <span class="n">p1</span><span class="o">.</span><span class="n">N</span><span class="p">)</span>
+
+    <span class="c1"># compute mean for joint samples</span>
+    <span class="n">delta</span> <span class="o">=</span> <span class="n">mean_B</span> <span class="o">-</span> <span class="n">mean_A</span>
+    <span class="n">mean</span> <span class="o">=</span> <span class="n">mean_A</span> <span class="o">+</span> <span class="p">(</span><span class="n">p1</span><span class="o">.</span><span class="n">N</span> <span class="o">*</span> <span class="n">delta</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">p0</span><span class="o">.</span><span class="n">N</span> <span class="o">+</span> <span class="n">p1</span><span class="o">.</span><span class="n">N</span><span class="p">)</span>
+
+    <span class="c1"># compute sum of images for joint samples</span>
+    <span class="n">sum_im_AB</span> <span class="o">=</span> <span class="n">p0</span><span class="o">.</span><span class="n">sum_im</span> <span class="o">+</span> <span class="n">p1</span><span class="o">.</span><span class="n">sum_im</span>
+
+    <span class="c1"># compute sum of variances for joint samples</span>
+    <span class="n">delta_P</span> <span class="o">=</span> <span class="n">mean_B</span> <span class="o">-</span> <span class="n">mean</span>
+    <span class="n">var_AB</span> <span class="o">=</span> <span class="n">p0</span><span class="o">.</span><span class="n">var</span> <span class="o">+</span> <span class="n">p1</span><span class="o">.</span><span class="n">var</span> <span class="o">+</span> <span class="p">(</span><span class="n">p1</span><span class="o">.</span><span class="n">N</span> <span class="o">*</span> <span class="n">delta</span> <span class="o">*</span> <span class="n">delta_P</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">VariancePart</span><span class="p">(</span><span class="n">var</span><span class="o">=</span><span class="n">var_AB</span><span class="p">,</span> <span class="n">sum_im</span><span class="o">=</span><span class="n">sum_im_AB</span><span class="p">,</span> <span class="n">N</span><span class="o">=</span><span class="n">N</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="StdDevUDF"><a class="viewcode-back" href="../../../reference/udf.html#libertem.udf.stddev.StdDevUDF">[docs]</a><span class="k">class</span> <span class="nc">StdDevUDF</span><span class="p">(</span><span class="n">UDF</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute sum of variances and sum of pixels from the given dataset</span>
+
+<span class="sd">    One-pass algorithm used in this code is taken from the following paper:</span>
+<span class="sd">    &quot;Numerically Stable Parallel Computation of (Co-) Variance&quot;</span>
+<span class="sd">    DOI : https://doi.org/10.1145/3221269.3223036</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    &gt;&gt;&gt; udf = StdDevUDF()</span>
+<span class="sd">    &gt;&gt;&gt; result = ctx.run_udf(dataset=dataset, udf=udf)</span>
+<span class="sd">    &gt;&gt;&gt; np.array(result[&quot;var&quot;])        # variance</span>
+<span class="sd">    array(...)</span>
+<span class="sd">    &gt;&gt;&gt; np.array(result[&quot;num_frame&quot;])  # number of frames</span>
+<span class="sd">    array(...)</span>
+<span class="sd">    &gt;&gt;&gt; np.array(result[&quot;sum_frame&quot;])  # sum of all frames</span>
+<span class="sd">    array(...)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="StdDevUDF.get_result_buffers"><a class="viewcode-back" href="../../../reference/udf.html#libertem.udf.stddev.StdDevUDF.get_result_buffers">[docs]</a>    <span class="k">def</span> <span class="nf">get_result_buffers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initializes BufferWrapper objects for sum of variances,</span>
+<span class="sd">        sum of frames, and the number of frames</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        A dictionary that maps &#39;var&#39;, &#39;std&#39;, &#39;mean&#39;, &#39;num_frame&#39;, &#39;sum_frame&#39; to</span>
+<span class="sd">        the corresponding BufferWrapper objects</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s1">&#39;var&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span>
+                <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;sig&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span>
+            <span class="p">),</span>
+            <span class="s1">&#39;num_frame&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span>
+                <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;single&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span>
+            <span class="p">),</span>
+            <span class="s1">&#39;sum_frame&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span>
+                <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;sig&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span>
+            <span class="p">)</span>
+        <span class="p">}</span></div>
+
+<div class="viewcode-block" id="StdDevUDF.merge"><a class="viewcode-back" href="../../../reference/udf.html#libertem.udf.stddev.StdDevUDF.merge">[docs]</a>    <span class="k">def</span> <span class="nf">merge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dest</span><span class="p">,</span> <span class="n">src</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Given two buffers that contain sum of variances, sum of frames,</span>
+<span class="sd">        and the number of frames used in each of the partitions, merge the</span>
+<span class="sd">        partitions and compute the joint sum of variances and sum of frames</span>
+<span class="sd">        over all frames used</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dest</span>
+<span class="sd">            Partial results that contains sum of variances, sum of frames, and the</span>
+<span class="sd">            number of frames used over all the frames used</span>
+
+<span class="sd">        src</span>
+<span class="sd">            Partial results that contains sum of variances, sum of frames, and the</span>
+<span class="sd">            number of frames used over current iteration of partition</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">p0</span> <span class="o">=</span> <span class="n">VariancePart</span><span class="p">(</span><span class="n">var</span><span class="o">=</span><span class="n">dest</span><span class="p">[</span><span class="s1">&#39;var&#39;</span><span class="p">][:],</span>
+                        <span class="n">sum_im</span><span class="o">=</span><span class="n">dest</span><span class="p">[</span><span class="s1">&#39;sum_frame&#39;</span><span class="p">][:],</span>
+                        <span class="n">N</span><span class="o">=</span><span class="n">dest</span><span class="p">[</span><span class="s1">&#39;num_frame&#39;</span><span class="p">][:])</span>
+        <span class="n">p1</span> <span class="o">=</span> <span class="n">VariancePart</span><span class="p">(</span><span class="n">var</span><span class="o">=</span><span class="n">src</span><span class="p">[</span><span class="s1">&#39;var&#39;</span><span class="p">][:],</span>
+                        <span class="n">sum_im</span><span class="o">=</span><span class="n">src</span><span class="p">[</span><span class="s1">&#39;sum_frame&#39;</span><span class="p">][:],</span>
+                        <span class="n">N</span><span class="o">=</span><span class="n">src</span><span class="p">[</span><span class="s1">&#39;num_frame&#39;</span><span class="p">][:])</span>
+        <span class="n">compute_merge</span> <span class="o">=</span> <span class="n">merge</span><span class="p">(</span><span class="n">p0</span><span class="p">,</span> <span class="n">p1</span><span class="p">)</span>
+
+        <span class="n">dest</span><span class="p">[</span><span class="s1">&#39;var&#39;</span><span class="p">][:]</span> <span class="o">=</span> <span class="n">compute_merge</span><span class="o">.</span><span class="n">var</span>
+        <span class="n">dest</span><span class="p">[</span><span class="s1">&#39;sum_frame&#39;</span><span class="p">][:]</span> <span class="o">=</span> <span class="n">compute_merge</span><span class="o">.</span><span class="n">sum_im</span>
+        <span class="n">dest</span><span class="p">[</span><span class="s1">&#39;num_frame&#39;</span><span class="p">][:]</span> <span class="o">=</span> <span class="n">compute_merge</span><span class="o">.</span><span class="n">N</span></div>
+
+<div class="viewcode-block" id="StdDevUDF.process_frame"><a class="viewcode-back" href="../../../reference/udf.html#libertem.udf.stddev.StdDevUDF.process_frame">[docs]</a>    <span class="k">def</span> <span class="nf">process_frame</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Given a frame, update sum of variances, sum of frames,</span>
+<span class="sd">        and the number of total frames</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        frame</span>
+<span class="sd">            single frame of the data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">num_frame</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">var</span><span class="p">[:]</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">p0</span> <span class="o">=</span> <span class="n">VariancePart</span><span class="p">(</span>
+                <span class="n">var</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">var</span><span class="p">,</span>
+                <span class="n">sum_im</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">sum_frame</span><span class="p">,</span>
+                <span class="n">N</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">num_frame</span>
+            <span class="p">)</span>
+            <span class="n">p1</span> <span class="o">=</span> <span class="n">VariancePart</span><span class="p">(</span><span class="n">var</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sum_im</span><span class="o">=</span><span class="n">frame</span><span class="p">,</span> <span class="n">N</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">compute_merge</span> <span class="o">=</span> <span class="n">merge</span><span class="p">(</span><span class="n">p0</span><span class="p">,</span> <span class="n">p1</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">var</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">compute_merge</span><span class="o">.</span><span class="n">var</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">sum_frame</span><span class="p">[:]</span> <span class="o">+=</span> <span class="n">frame</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">num_frame</span><span class="p">[:]</span> <span class="o">+=</span> <span class="mi">1</span></div></div>
+
+
+<span class="k">def</span> <span class="nf">run_stddev</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">roi</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute sum of variances and sum of pixels from the given dataset</span>
+
+<span class="sd">    One-pass algorithm used in this code is taken from the following paper:</span>
+<span class="sd">    &quot;Numerically Stable Parallel Computation of (Co-) Variance&quot;</span>
+<span class="sd">    DOI : https://doi.org/10.1145/3221269.3223036</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ctx</span>
+<span class="sd">        Context class that contains methods for loading datasets, creating jobs on them</span>
+<span class="sd">        and running them</span>
+
+<span class="sd">    dataset</span>
+<span class="sd">        dataset to work on</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pass_results</span>
+<span class="sd">        A dictionary of narrays that contains sum of variances, sum of pixels,</span>
+<span class="sd">        and number of frames used to compute the above statistic</span>
+
+<span class="sd">    To retrieve statistic, using the following commands:</span>
+<span class="sd">    variance : pass_results[&#39;var&#39;]</span>
+<span class="sd">    standard deviation : pass_results[&#39;std&#39;]</span>
+<span class="sd">    sum of pixels : pass_results[&#39;sum_frame&#39;]</span>
+<span class="sd">    mean : pass_results[&#39;mean&#39;]</span>
+<span class="sd">    number of frames : pass_results[&#39;num_frame&#39;]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">stddev_job</span> <span class="o">=</span> <span class="n">StdDevUDF</span><span class="p">()</span>
+    <span class="n">pass_results</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">run_udf</span><span class="p">(</span><span class="n">dataset</span><span class="o">=</span><span class="n">dataset</span><span class="p">,</span> <span class="n">udf</span><span class="o">=</span><span class="n">stddev_job</span><span class="p">,</span> <span class="n">roi</span><span class="o">=</span><span class="n">roi</span><span class="p">)</span>
+
+    <span class="n">pass_results</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">pass_results</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+    <span class="n">pass_results</span><span class="p">[</span><span class="s1">&#39;var&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pass_results</span><span class="p">[</span><span class="s1">&#39;var&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="o">/</span><span class="n">pass_results</span><span class="p">[</span><span class="s1">&#39;num_frame&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
+    <span class="n">pass_results</span><span class="p">[</span><span class="s1">&#39;std&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">pass_results</span><span class="p">[</span><span class="s1">&#39;var&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+    <span class="n">pass_results</span><span class="p">[</span><span class="s1">&#39;mean&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pass_results</span><span class="p">[</span><span class="s1">&#39;sum_frame&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="o">/</span><span class="n">pass_results</span><span class="p">[</span><span class="s1">&#39;num_frame&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
+    <span class="n">pass_results</span><span class="p">[</span><span class="s1">&#39;num_frame&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pass_results</span><span class="p">[</span><span class="s1">&#39;num_frame&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
+    <span class="n">pass_results</span><span class="p">[</span><span class="s1">&#39;sum_frame&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pass_results</span><span class="p">[</span><span class="s1">&#39;sum_frame&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
+
+    <span class="k">return</span> <span class="n">pass_results</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../../../index.html">
+    <img class="logo" src="../../../_static/logo.png" alt="Logo"/>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">GUI usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../concepts.html">Concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../formats.html">Loading data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../udf.html">User-defined functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../applications.html">Applications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../performance.html">Performance</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../debugging.html">Debugging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference/index.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tips.html">Tips and tricks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../why_python.html">Why Python?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../gsoc.html">GSoC 2019 ideas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../authorship.html">Authorship policy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../citing.html">Citing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../acknowledgments.html">Acknowledgments</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, LiberTEM Authors.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
