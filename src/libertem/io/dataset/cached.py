@@ -79,6 +79,9 @@ class OrphanItem:
 
 
 class CacheStats:
+    """
+    A helper class for managing cache statistics. It uses sqlite under the hood.
+    """
     def __init__(self, db_path):
         self._db_path = db_path
         self._conn = None
@@ -111,6 +114,7 @@ class CacheStats:
             PRIMARY KEY (path)
         );""")
         self._conn.execute("PRAGMA user_version = 1;")
+        self._conn.execute("PRAGMA journal_mode = WAL;")
 
     def _have_item(self, cache_item: CacheItem):
         rows = self._conn.execute("""
@@ -395,7 +399,9 @@ class CachedDataSet(DataSet):
             structure=source_structure,
             enable_direct=self._enable_direct,
         )
-        cluster_ds.check_valid()
+        # FIXME: semantics of check_valid: only runs on each host in this case,
+        # Context only runs it on a single worker node. I guess Context needs to change?
+        executor.run_each_host(cluster_ds.check_valid)
         self._cluster_ds = cluster_ds.initialize(executor=executor)
         self._executor = executor
         return self

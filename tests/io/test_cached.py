@@ -26,7 +26,7 @@ def default_cached_ds(tmpdir_factory, default_raw, lt_ctx):
 # the underlying file
 def test_start_client():
     with dd.LocalCluster() as cluster:
-        client = dd.Client(cluster, set_as_default=False)
+        dd.Client(cluster, set_as_default=False)
 
 
 def test_simple(default_cached_ds):
@@ -74,6 +74,25 @@ async def test_with_dask_executor(tmpdir_factory, default_raw, dask_executor):
     )
     ds = ds.initialize(executor=dask_executor)
     list(ds.get_partitions())  # trigger data locality queries
+
+
+@pytest.mark.dist
+def test_cached_dist(dist_ctx, raw_on_workers, tmpdir_factory):
+    """
+    integration test that runs some real calculation on the dataset
+    """
+    for i in range(16):
+        datadir = str(tmpdir_factory.mktemp('cached_ds_directory'))
+        strategy = LRUCacheStrategy(capacity=1024*1024*1024)
+        ds = CachedDataSet(
+            source_ds=raw_on_workers,
+            cache_path=datadir,
+            strategy=strategy,
+        )
+        ds = ds.initialize(executor=dist_ctx.executor)
+        analysis = dist_ctx.create_sum_analysis(dataset=ds)
+        results = dist_ctx.run(analysis)
+        assert results[0].raw_data.shape == (128, 128)
 
 
 def test_partition_pickles(default_cached_ds):
