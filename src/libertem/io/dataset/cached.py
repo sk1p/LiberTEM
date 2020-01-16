@@ -85,15 +85,22 @@ class CacheStats:
     def __init__(self, db_path):
         self._db_path = db_path
         self._conn = None
-        self._connect()
 
     def _connect(self):
-        conn = sqlite3.connect(self._db_path)
+        conn = sqlite3.connect(self._db_path, timeout=15000)
         conn.row_factory = VerboseRow
         self._conn = conn
 
     def close(self):
         self._conn.close()
+        self._conn = None
+
+    def __enter__(self):
+        self._connect()
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
         self._conn = None
 
     def initialize_schema(self):
@@ -125,40 +132,44 @@ class CacheStats:
 
     def record_hit(self, cache_item: CacheItem):
         now = time.time()
-        self._conn.execute("BEGIN")
+        cursor = self._conn.cursor()
+        cursor.execute("BEGIN")
         if not self._have_item(cache_item):
-            self._conn.execute("""
+            cursor.execute("""
             INSERT INTO stats (partition, dataset, hits, size, last_access, path)
             VALUES (?, ?, 1, ?, ?, ?)
             """, [cache_item.partition, cache_item.dataset,
                   cache_item.size, now, cache_item.path])
         else:
-            self._conn.execute("""
+            cursor.execute("""
             UPDATE stats
             SET hits = MAX(hits + 1, 1), last_access = ?
             WHERE dataset = ? AND partition = ?
             """, [now, cache_item.dataset, cache_item.partition])
-        self._conn.execute("DELETE FROM orphans WHERE path = ?", [cache_item.path])
+        cursor.execute("DELETE FROM orphans WHERE path = ?", [cache_item.path])
         self._conn.commit()
+        cursor.close()
 
     def record_miss(self, cache_item: CacheItem):
         now = time.time()
 
-        self._conn.execute("BEGIN")
+        cursor = self._conn.cursor()
+        cursor.execute("BEGIN")
         if not self._have_item(cache_item):
-            self._conn.execute("""
+            cursor.execute("""
             INSERT INTO stats (partition, dataset, hits, size, last_access, path)
             VALUES (?, ?, 0, ?, ?, ?)
             """, [cache_item.partition, cache_item.dataset, cache_item.size,
                   now, cache_item.path])
         else:
-            self._conn.execute("""
+            cursor.execute("""
             UPDATE stats
             SET hits = 0, last_access = ?
             WHERE dataset = ? AND partition = ?
             """, [now, cache_item.dataset, cache_item.partition])
-        self._conn.execute("DELETE FROM orphans WHERE path = ?", [cache_item.path])
+        cursor.execute("DELETE FROM orphans WHERE path = ?", [cache_item.path])
         self._conn.commit()
+        cursor.close()
 
     def record_eviction(self, cache_item: Union[CacheItem, OrphanItem]):
         if cache_item.is_orphan:
@@ -323,23 +334,26 @@ class Cache:
         self.strategy = strategy
 
     def record_hit(self, cache_item: CacheItem):
-        self._stats.record_hit(cache_item)
+        with self._stats:
+            self._stats.record_hit(cache_item)
 
     def record_miss(self, cache_item: CacheItem):
-        self._stats.record_miss(cache_item)
+        with self._stats:
+            self._stats.record_miss(cache_item)
 
     def evict(self, cache_key: str, size: int):
         """
         Make place for `size` bytes which will be used
         by the dataset identified by the `cache_key`.
         """
-        victims = self.strategy.get_victim_list(cache_key, size, self._stats)
-        for cache_item in victims:
-            # if it has been deleted by the user, we don't care and just remove
-            # the record from the database:
-            if os.path.exists(cache_item.path):
-                os.unlink(cache_item.path)
-            self._stats.record_eviction(cache_item)
+        with self._stats:
+            victims = self.strategy.get_victim_list(cache_key, size, self._stats)
+            for cache_item in victims:
+                # if it has been deleted by the user, we don't care and just remove
+                # the record from the database:
+                if os.path.exists(cache_item.path):
+                    os.unlink(cache_item.path)
+                self._stats.record_eviction(cache_item)
 
     def collect_orphans(self, base_path: str):
         """
@@ -348,11 +362,12 @@ class Cache:
         """
         # the structure here is: {base_path}/{dataset_cache_key}/parts/*
         orphans = []
-        for path in glob.glob(os.path.join(base_path, "*", "parts", "*")):
-            size = os.stat(path).st_size
-            res = self._stats.maybe_orphan(OrphanItem(path=path, size=size))
-            if res is not None:
-                orphans.append(res)
+        with self._stats:
+            for path in glob.glob(os.path.join(base_path, "*", "parts", "*")):
+                size = os.stat(path).st_size
+                res = self._stats.maybe_orphan(OrphanItem(path=path, size=size))
+                if res is not None:
+                    orphans.append(res)
         return orphans
 
 
@@ -413,7 +428,8 @@ class CachedDataSet(DataSet):
         os.makedirs(self._path, exist_ok=True)
 
         cache_stats = CacheStats(self._get_db_path())
-        cache_stats.initialize_schema()
+        with cache_stats:
+            cache_stats.initialize_schema()
         cache = Cache(stats=cache_stats, strategy=self._cache_strategy)
         cache.collect_orphans(self._cache_path)
 

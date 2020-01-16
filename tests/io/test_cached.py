@@ -6,6 +6,7 @@ import pytest
 import dask.distributed as dd
 
 from libertem.io.dataset.cached import CachedDataSet, LRUCacheStrategy
+from libertem.api import Context
 
 
 @pytest.fixture
@@ -74,6 +75,12 @@ async def test_with_dask_executor(tmpdir_factory, default_raw, dask_executor):
     )
     ds = ds.initialize(executor=dask_executor)
     list(ds.get_partitions())  # trigger data locality queries
+
+    ctx = Context(executor=dask_executor)
+    for i in range(16):
+        analysis = ctx.create_sum_analysis(dataset=ds)
+        results = ctx.run(analysis)
+        assert results[0].raw_data.shape == (128, 128)
 
 
 @pytest.mark.dist
