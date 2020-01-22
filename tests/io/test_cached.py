@@ -5,7 +5,8 @@ import numpy as np
 import pytest
 import dask.distributed as dd
 
-from libertem.io.dataset.cached import CachedDataSet, LRUCacheStrategy
+from libertem.io.dataset.cached import CachedDataSet
+from libertem.io.cache.strategy import LRUCacheStrategy
 from libertem.api import Context
 
 

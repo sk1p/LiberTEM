@@ -4,15 +4,15 @@ from unittest import mock
 import pytest
 
 
-from libertem.io.dataset.cached import CacheStats, CacheItem, OrphanItem
+from libertem.io.cache.stats import CacheStats, CacheItem, OrphanItem
 
 
 @pytest.fixture
 def cs():
     cs = CacheStats(":memory:")
-    cs.initialize_schema()
-    yield cs
-    cs.close()
+    with cs:
+        cs.initialize_schema()
+        yield cs
 
 
 @pytest.fixture
