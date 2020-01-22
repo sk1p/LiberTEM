@@ -6,6 +6,8 @@ import numpy as np
 from libertem.io.utils import get_partition_shape
 from libertem.common import Slice, Shape
 from libertem.common.buffers import bytes_aligned, zeros_aligned
+from libertem.executor.base import JobExecutor
+from libertem.utils import SideChannel
 
 
 def _roi_to_indices(roi, start, stop):
@@ -188,6 +190,44 @@ class DataSet(object):
         be called on the master node.
         """
         raise NotImplementedError()
+
+    def hook_before_udf_run(self, executor: JobExecutor, sidechannel: SideChannel, roi):
+        """
+        This method is run on the master node before a UDF is run. Can use the executor
+        to spawn tasks on worker nodes.
+
+        Parameters
+        ----------
+
+        executor
+            A synchronous executor
+
+        sidechannel
+            A SideChannel. If you write DataSet-specific information to it, please use
+            the 'dataset' key.
+
+        roi : np.array or None
+            The region of interest that will be accessed by this UDF run
+        """
+
+    def hook_after_udf_run(self, executor, sidechannel, roi):
+        """
+        This method is run on the master node after a UDF is run. Can use the executor
+        to spawn tasks on worker nodes.
+
+        Parameters
+        ----------
+
+        executor
+            A synchronous executor
+
+        sidechannel
+            A SideChannel. If you write DataSet-specific information to it, please use
+            the 'dataset' key.
+
+        roi : np.array or None
+            The region of interest that has been accessed by this UDF run
+        """
 
     @property
     def dtype(self):

@@ -5,6 +5,7 @@ import numpy as np
 
 from libertem.common import Shape, Slice
 from .meta import UDFMeta
+from libertem.utils import SideChannel
 
 
 class Task(object):
@@ -48,7 +49,7 @@ class UDFRunner:
     `UDFRunner` is the main class responsible for execution of UDFs. It takes
     care of allocating buffers, and forwarding all relevant information to the UDF
     instance. It also contains the main loop that reads from the `DataSet` and
-    calls the approriate `proces_*` function.
+    calls the approriate `process_*` function.
     """
 
     def __init__(self, udf, debug=False):
@@ -122,7 +123,7 @@ class UDFRunner:
 
         return self._udf.results, partition
 
-    def run_for_dataset(self, dataset, executor, roi=None):
+    def _prepare_run_for_dataset(self, dataset, executor, roi):
         if roi is not None:
             if np.product(roi.shape) != np.product(dataset.shape.nav):
                 raise ValueError(
@@ -141,8 +142,17 @@ class UDFRunner:
         self._udf.init_result_buffers()
         self._udf.allocate_for_full(dataset, roi)
 
+        sidechannel = SideChannel()
         tasks = self._make_udf_tasks(dataset, roi, sidechannel)
+
+        return sidechannel, tasks
+
+    def run_for_dataset(self, dataset, executor, roi=None):
         cancel_id = str(uuid.uuid4())
+
+        sidechannel, tasks = self._prepare_run_for_dataset(dataset, executor, roi)
+
+        dataset.hook_before_udf_run(executor, sidechannel, roi)
 
         if self._debug:
             tasks = list(tasks)
@@ -157,29 +167,15 @@ class UDFRunner:
 
         self._udf.clear_views()
 
+        dataset.hook_after_udf_run(executor, sidechannel, roi)
+
         return self._udf.results.as_dict()
 
     async def run_for_dataset_async(self, dataset, executor, cancel_id, roi=None):
-        # FIXME: code duplication?
-        if roi is not None:
-            if np.product(roi.shape) != np.product(dataset.shape.nav):
-                raise ValueError(
-                    "roi: incompatible shapes: %s (roi) vs %s (dataset)" % (
-                        roi.shape, dataset.shape.nav
-                    )
-                )
-        meta = UDFMeta(
-            partition_shape=None,
-            dataset_shape=dataset.shape,
-            roi=roi,
-            dataset_dtype=dataset.dtype,
-            input_dtype=self._get_dtype(dataset.dtype),
-        )
-        self._udf.set_meta(meta)
-        self._udf.init_result_buffers()
-        self._udf.allocate_for_full(dataset, roi)
+        sidechannel, tasks = self._prepare_run_for_dataset(dataset, executor, roi)
 
-        tasks = self._make_udf_tasks(dataset, roi, sidechannel)
+        # FIXME: convert to sync executor and run in different thread
+        dataset.hook_before_udf_run(executor, sidechannel, roi)
 
         async for part_results, partition in executor.run_tasks(tasks, cancel_id):
             self._udf.set_views_for_partition(partition)
@@ -193,6 +189,9 @@ class UDFRunner:
             # yield at least one result (which should be empty):
             self._udf.clear_views()
             yield self._udf.results.as_dict()
+
+        # FIXME: convert to sync executor and run in different thread
+        dataset.hook_after_udf_run(executor, sidechannel, roi)
 
     def _roi_for_partition(self, roi, partition):
         return roi.reshape(-1)[partition.slice.get(nav_only=True)]

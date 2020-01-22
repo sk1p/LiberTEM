@@ -1,3 +1,5 @@
+import collections
+
 import numpy as np
 
 
@@ -74,3 +76,16 @@ def within_frame(peaks, r, fy, fx):
     '''
     selector = (peaks >= (r, r)) * (peaks < (fy - r, fx - r))
     return selector.all(axis=-1)
+
+
+class SideChannel:
+    """
+    Simple structure to piggy-back some messages onto workers together with UDFTasks
+    and the back together with UDF results.
+    """
+
+    def __init__(self):
+        self._namespaces = collections.defaultdict(lambda: {})
+
+    def __getitem__(self, key):
+        return self._namespaces[key]
