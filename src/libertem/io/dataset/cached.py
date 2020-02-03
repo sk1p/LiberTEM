@@ -162,6 +162,8 @@ class CachedPartition(Partition):
 
     def get_tiles(self, crop_to=None, full_frames=False, mmap=False,
                   dest_dtype="float32", roi=None, target_size=None):
+        sc_data = self.sidechannel['dataset']
+
         cache = self._get_cache()
         cached_tiles = self._cluster_part.get_tiles(crop_to=crop_to, full_frames=full_frames,
                                                    mmap=mmap, dest_dtype=dest_dtype, roi=roi,

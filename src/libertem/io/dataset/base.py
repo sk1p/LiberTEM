@@ -381,11 +381,20 @@ class Partition(object):
     def __init__(self, meta, partition_slice):
         self.meta = meta
         self.slice = partition_slice
+        self._sidechannel = None
         assert partition_slice.shape.nav.dims == 1, "nav dims should be flat"
 
     @property
     def dtype(self):
         return self.meta.dtype
+
+    @property
+    def sidechannel(self):
+        return self._sidechannel
+
+    @sidechannel.setter
+    def sidechannel(self, new_sidechannel):
+        self._sidechannel = new_sidechannel
 
     @property
     def shape(self):

@@ -1,4 +1,5 @@
-from typing import Union
+from typing import Union, Set
+import datetime
 import sqlite3
 import time
 
@@ -43,6 +44,13 @@ class CacheItem:
         )
 
 
+class StatsItem(CacheItem):
+    def __init__(self, hits: int, last_access: datetime.datetime, *args, **kwargs):
+        self.hits = hits
+        self.last_acchess = last_access
+        super().__init__(*args, **kwargs)
+
+
 class OrphanItem:
     """
     An orphan, a file in the cache structure, which we don't know much about
@@ -68,6 +76,78 @@ class OrphanItem:
 
 
 class CacheStats:
+    """
+    Cache statistics for all CachedDataSets on a single worker node
+    """
+
+    def __init__(self):
+        pass
+
+    def record_hit(self, cache_item: CacheItem):
+        raise NotImplementedError()
+
+    def record_miss(self, cache_item: CacheItem):
+        raise NotImplementedError()
+
+    def record_eviction(self, cache_item: Union[CacheItem, OrphanItem]):
+        raise NotImplementedError()
+
+    def get_datasets(self) -> Set[str]:
+        """
+        get a set of dataset ids
+        """
+        raise NotImplementedError()
+
+    def get_items_for_datasets(self, datasets: Set[str]) -> Set[StatsItem]:
+        """
+        get cache items for all specified datasets
+        """
+        raise NotImplementedError()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        pass
+
+
+class InMemoryCacheStats(CacheStats):
+    def __init__(self):
+        self._stats = {}
+        self._by_dataset = {}
+
+    def record_hit(self, cache_item: CacheItem):
+        raise NotImplementedError()
+
+    def record_miss(self, cache_item: CacheItem):
+        raise NotImplementedError()
+
+    def record_eviction(self, cache_item: Union[CacheItem, OrphanItem]):
+        raise NotImplementedError()
+
+    def get_datasets(self) -> Set[str]:
+        """
+        get a set of dataset ids
+        """
+        return set(self._by_dataset.keys())
+
+    def get_items_for_datasets(self, datasets: Set[str]):
+        """
+        get cache items for all specified datasets
+        """
+        result = []
+        for ds in datasets:
+            result.append(self._by_dataset[ds])
+        return set(result)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        pass
+
+
+class SQLCacheStats(CacheStats):
     """
     A helper class for managing cache statistics. It uses sqlite under the hood.
     """
