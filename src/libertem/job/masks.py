@@ -9,7 +9,7 @@ import scipy.sparse
 import numpy as np
 
 from libertem.io.dataset.base import DataTile, Partition
-from libertem.udf.base import Task
+from libertem.udf.runner import Task
 from .base import BaseJob, ResultTile
 from libertem.common import Slice
 from libertem.common.buffers import zeros_aligned

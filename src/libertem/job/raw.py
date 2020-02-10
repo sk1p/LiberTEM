@@ -1,6 +1,6 @@
 import logging
 
-from libertem.udf.base import Task
+from libertem.udf.runner import Task
 from .base import BaseJob, ResultTile
 from libertem.common.buffers import zeros_aligned
 

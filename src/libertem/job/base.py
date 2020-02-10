@@ -3,7 +3,7 @@ import warnings
 import numpy as np
 
 # For backwards compatibility purposes after move
-from libertem.udf.base import Task  # noqa: F401
+from libertem.udf.runner import Task  # noqa: F401
 
 
 class Job(object):
