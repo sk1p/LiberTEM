@@ -1,18 +1,9 @@
+import types
 from typing import Union, Set
+from collections import defaultdict
 import datetime
 import sqlite3
 import time
-
-
-class VerboseRow(sqlite3.Row):
-    """sqlite3.Row with a __repr__"""
-    def __repr__(self):
-        return "<VerboseRow %r>" % (
-            {
-                k: self[k]
-                for k in self.keys()
-            },
-        )
 
 
 class CacheItem:
@@ -21,88 +12,155 @@ class CacheItem:
     a partition of the CachedDataSet.
     """
     def __init__(self, dataset: str, partition: int, size: int, path: str):
-        self.dataset = dataset  # dataset id string, for example the cache key
-        self.partition = partition  # partition index as integer
-        self.size = size  # partition size in bytes
-        self.path = path  # full absolute path to the file for the partition
-        self.is_orphan = False  # quack
+        """
+        Parameters
+        ----------
+        dataset
+            dataset id string, for example the cache key
+        partition
+            partition index
+        size
+            on-disk partition size in bytes
+        path
+            full absolute path to the file for the partition
+        """
+        # dataset and partition are read-only, as they form the identity of this object
+        self._dataset = dataset
+        self._partition = partition
+        self.size = size
+        self.path = path
+
+    @property
+    def dataset(self):
+        return self._dataset
+
+    @property
+    def partition(self):
+        return self._partition
 
     def __eq__(self, other):
         # dataset and partition are composite pk
         return self.dataset == other.dataset and self.partition == other.partition
 
+    def __hash__(self):
+        # invariant: a == b => hash(a) == hash(b)
+        return hash(self.key())
+
+    def key(self):
+        """
+        get a uniquely identifying key for this cache item
+        """
+        return (self.dataset, self.partition)
+
     def __repr__(self):
         return "<CacheItem: %s/%d>" % (self.dataset, self.partition)
 
-    @classmethod
-    def from_row(cls, row):
-        return cls(
-            dataset=row["dataset"],
-            partition=row["partition"],
-            size=row["size"],
-            path=row["path"]
-        )
-
 
 class StatsItem(CacheItem):
-    def __init__(self, hits: int, last_access: datetime.datetime, *args, **kwargs):
+    def __init__(self, hits: int, last_access: float, *args, **kwargs):
+        """
+        Parameters
+        ----------
+        hits
+            number of recorded cache hits
+        last_access
+            utc timestamp of last access, use 0 if not known
+        """
         self.hits = hits
         self.last_acchess = last_access
         super().__init__(*args, **kwargs)
 
+    def hit(self):
+        self.hits += 1
+        return self.hits
 
-class OrphanItem:
-    """
-    An orphan, a file in the cache structure, which we don't know much about
-    (only path and size)
-    """
-    def __init__(self, path, size):
-        self.path = path
-        self.size = size
-        self.is_orphan = True
+    def miss(self):
+        self.hits = 0
+        return self.hits
 
-    def __eq__(self, other):
-        return self.path == other.path
-
-    def __repr__(self):
-        return "<OrphanItem: %s>" % (self.path,)
-
-    @classmethod
-    def from_row(cls, row):
-        return cls(
-            size=row["size"],
-            path=row["path"]
-        )
+    def set_last_access(self, timestamp):
+        self.last_access = timestamp
 
 
 class CacheStats:
-    """
-    Cache statistics for all CachedDataSets on a single worker node
-    """
-
     def __init__(self):
-        pass
+        self._evictions = defaultdict(lambda: 0)
+        self._all_items = {}
+        self._active_items = set()
+        self._items_to_add = set()
+        self._items_to_remove = set()
 
-    def record_hit(self, cache_item: CacheItem):
-        raise NotImplementedError()
+    def get_item(self, dataset, partition):
+        return self._all_items[(dataset, partition)]
 
-    def record_miss(self, cache_item: CacheItem):
-        raise NotImplementedError()
+    def _get_timestamp(self, timestamp) -> float:
+        if timestamp is None:
+            return time.time()
+        return timestamp
 
-    def record_eviction(self, cache_item: Union[CacheItem, OrphanItem]):
-        raise NotImplementedError()
-
-    def get_datasets(self) -> Set[str]:
+    def _stats_item(self, cache_item: CacheItem) -> StatsItem:
         """
-        get a set of dataset ids
+        Get or create the StatsItem that matches the given CacheItem
         """
-        raise NotImplementedError()
+        return self._all_items.get(
+            cache_item.key(),
+            StatsItem(
+                dataset=cache_item.dataset,
+                partition=cache_item.partition,
+                size=cache_item.size,
+                path=cache_item.path,
+                hits=0,
+                last_access=0,
+            )
+        )
 
-    def get_items_for_datasets(self, datasets: Set[str]) -> Set[StatsItem]:
+    def _add_item(self, stats_item: StatsItem):
+        self._all_items[stats_item.key()] = stats_item
+        self._items_to_add.add(stats_item)
+        self._active_items.add(stats_item)
+
+    def _remove_item(self, stats_item: CacheItem):
+        self._all_items[stats_item.key()] = stats_item
+        self._items_to_remove.add(stats_item)
+        self._items_to_add -= self._items_to_remove
+        if stats_item in self._active_items:
+            self._active_items.remove(stats_item)
+
+    def record_hit(self, cache_item: CacheItem, timestamp=None):
         """
-        get cache items for all specified datasets
+        increment hit counter, update last access timestamp
         """
-        raise NotImplementedError()
+        stats_item = self._stats_item(cache_item)
+        timestamp = self._get_timestamp(timestamp)
+        stats_item.set_last_access(timestamp)
+        stats_item.hit()
+        self._add_item(stats_item)
+
+    def record_miss(self, cache_item: CacheItem, timestamp=None):
+        """
+        set hit counter to 0, update last access timestamp
+        """
+        stats_item = self._stats_item(cache_item)
+        timestamp = self._get_timestamp(timestamp)
+        stats_item.set_last_access(timestamp)
+        stats_item.miss()
+        self._add_item(stats_item)
+
+    def record_eviction(self, cache_item: CacheItem, timestamp=None):
+        """
+        remove item from stats
+        """
+        stats_item = self._stats_item(cache_item)
+        self._remove_item(stats_item)
+
+    def get_active_items(self):
+        return self._active_items
+
+    def get_used_capacity(self) -> int:
+        """
+        currently occupied disk space of this cache in bytes (according to stats, not fs!)
+        """
+        return sum(i.size for i in self._active_items)
 
     def __enter__(self):
         return self
@@ -110,213 +168,22 @@ class CacheStats:
     def __exit__(self, *exc):
         pass
 
-
-class InMemoryCacheStats(CacheStats):
-    def __init__(self):
-        self._stats = {}
-        self._by_dataset = {}
-
-    def record_hit(self, cache_item: CacheItem):
+    def merge(self, other_stats):
         raise NotImplementedError()
 
-    def record_miss(self, cache_item: CacheItem):
+    def serialize(self):
         raise NotImplementedError()
 
-    def record_eviction(self, cache_item: Union[CacheItem, OrphanItem]):
+    def save(self, path):
+        # TODO: implement me!
+        # steps:
+        # 1) create and lock a lock file
+        # 2) read old cache stats, if they exist
+        # 3) merge old and new cache stats
+        # 4) write back cache stats
         raise NotImplementedError()
 
-    def get_datasets(self) -> Set[str]:
-        """
-        get a set of dataset ids
-        """
-        return set(self._by_dataset.keys())
-
-    def get_items_for_datasets(self, datasets: Set[str]):
-        """
-        get cache items for all specified datasets
-        """
-        result = []
-        for ds in datasets:
-            result.append(self._by_dataset[ds])
-        return set(result)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *exc):
-        pass
-
-
-class SQLCacheStats(CacheStats):
-    """
-    A helper class for managing cache statistics. It uses sqlite under the hood.
-    """
-    def __init__(self, db_path):
-        self._db_path = db_path
-        self._conn = None
-
-    def _connect(self):
-        conn = sqlite3.connect(self._db_path, timeout=15000)
-        conn.row_factory = VerboseRow
-        self._conn = conn
-
-    def close(self):
-        self._conn.close()
-        self._conn = None
-
-    def __enter__(self):
-        self._connect()
-        return self
-
-    def __exit__(self, *exc):
-        self.close()
-        self._conn = None
-
-    def initialize_schema(self):
-        self._conn.execute("""
-        CREATE TABLE IF NOT EXISTS stats (
-            dataset VARCHAR NOT NULL,           -- dataset id, for example the cache key
-            partition INTEGER NOT NULL,         -- partition index as integer
-            hits INTEGER NOT NULL,              -- access counter
-            size INTEGER NOT NULL,              -- in bytes
-            last_access REAL NOT NULL,          -- float timestamp, like time.time()
-            path VARCHAR NOT NULL,              -- full path to the file for this partition
-            PRIMARY KEY (dataset, partition)
-        );""")
-        self._conn.execute("""
-        CREATE TABLE IF NOT EXISTS orphans (
-            path VARCHAR NOT NULL,              -- full path to the orphaned file
-            size INTEGER NOT NULL,              -- in bytes
-            PRIMARY KEY (path)
-        );""")
-        self._conn.execute("PRAGMA user_version = 1;")
-        self._conn.execute("PRAGMA journal_mode = WAL;")
-
-    def _have_item(self, cache_item: CacheItem):
-        rows = self._conn.execute("""
-        SELECT hits FROM stats
-        WHERE dataset = ? AND partition = ?
-        """, [cache_item.dataset, cache_item.partition]).fetchall()
-        return len(rows) > 0
-
-    def record_hit(self, cache_item: CacheItem):
-        now = time.time()
-        cursor = self._conn.cursor()
-        cursor.execute("BEGIN")
-        if not self._have_item(cache_item):
-            cursor.execute("""
-            INSERT INTO stats (partition, dataset, hits, size, last_access, path)
-            VALUES (?, ?, 1, ?, ?, ?)
-            """, [cache_item.partition, cache_item.dataset,
-                  cache_item.size, now, cache_item.path])
-        else:
-            cursor.execute("""
-            UPDATE stats
-            SET hits = MAX(hits + 1, 1), last_access = ?
-            WHERE dataset = ? AND partition = ?
-            """, [now, cache_item.dataset, cache_item.partition])
-        cursor.execute("DELETE FROM orphans WHERE path = ?", [cache_item.path])
-        self._conn.commit()
-        cursor.close()
-
-    def record_miss(self, cache_item: CacheItem):
-        now = time.time()
-
-        cursor = self._conn.cursor()
-        cursor.execute("BEGIN")
-        if not self._have_item(cache_item):
-            cursor.execute("""
-            INSERT INTO stats (partition, dataset, hits, size, last_access, path)
-            VALUES (?, ?, 0, ?, ?, ?)
-            """, [cache_item.partition, cache_item.dataset, cache_item.size,
-                  now, cache_item.path])
-        else:
-            cursor.execute("""
-            UPDATE stats
-            SET hits = 0, last_access = ?
-            WHERE dataset = ? AND partition = ?
-            """, [now, cache_item.dataset, cache_item.partition])
-        cursor.execute("DELETE FROM orphans WHERE path = ?", [cache_item.path])
-        self._conn.commit()
-        cursor.close()
-
-    def record_eviction(self, cache_item: Union[CacheItem, OrphanItem]):
-        if cache_item.is_orphan:
-            self.remove_orphan(cache_item)
-        else:
-            self._conn.execute("""
-            DELETE FROM stats
-            WHERE partition = ? AND dataset = ?
-            """, [cache_item.partition, cache_item.dataset])
-            self._conn.commit()
-
-    def maybe_orphan(self, orphan: OrphanItem):
-        """
-        Create an entry for a file we don't have any statistics about, after checking
-        the stats table for the given path.
-        Getting a conflict here means concurrently running maybe_orphan processes,
-        so we can safely ignore it.
-        """
-        exists = len(self._conn.execute("""
-        SELECT 1 FROM stats WHERE path = ?
-        """, [orphan.path]).fetchall()) > 0
-        if not exists:
-            self._conn.execute("""
-            INSERT OR IGNORE INTO orphans (path, size)
-            VALUES (?, ?)
-            """, [orphan.path, orphan.size])
-            self._conn.commit()
-            return orphan
-
-    def get_orphans(self):
-        cursor = self._conn.execute("SELECT path, size FROM orphans ORDER BY size DESC")
-        return [
-            OrphanItem.from_row(row)
-            for row in cursor
-        ]
-
-    def remove_orphan(self, path: str):
-        self._conn.execute("""
-        DELETE FROM orphans WHERE path = ?
-        """, [path])
-        self._conn.commit()
-
-    def get_stats_for_dataset(self, cache_key):
-        """
-        Return dataset cache stats as dict mapping partition ids to dicts of their
-        properties (keys: size, last_access, hits)
-        """
-        cursor = self._conn.execute("""
-        SELECT partition, path, size, hits, last_access
-        FROM stats
-        WHERE dataset = ?
-        """, [cache_key])
-        return {
-            row["partition"]: self._format_row(row)
-            for row in cursor.fetchall()
-        }
-
-    def query(self, sql, args=None):
-        """
-        Custom sqlite query, returns a sqlite3 Cursor object
-        """
-        if args is None:
-            args = []
-        return self._conn.execute(sql, args)
-
-    def _format_row(self, row):
-        return {
-            "path": row["path"],
-            "size": row["size"],
-            "last_access": row["last_access"],
-            "hits": row["hits"],
-        }
-
-    def get_used_capacity(self):
-        size = self._conn.execute("""
-        SELECT SUM(size) AS "total_size" FROM stats;
-        """).fetchone()["total_size"]
-        size_orphans = self._conn.execute("""
-        SELECT SUM(size) AS "total_size" FROM orphans;
-        """).fetchone()["total_size"]
-        return (size or 0) + (size_orphans or 0)
+    @classmethod
+    def load(self, serialized):
+        raise NotImplementedError()
+        return CacheStats(...)

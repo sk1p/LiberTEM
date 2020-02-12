@@ -69,11 +69,8 @@ class CachedDataSet(DataSet):
     def _ensure_cache_structure(self):
         os.makedirs(self._path, exist_ok=True)
 
-        cache_stats = CacheStats(self._get_db_path())
-        with cache_stats:
-            cache_stats.initialize_schema()
+        cache_stats = CacheStats()
         cache = Cache(stats=cache_stats, strategy=self._cache_strategy)
-        cache.collect_orphans(self._cache_path)
 
     @property
     def dtype(self):
@@ -131,7 +128,7 @@ class CachedPartition(Partition):
         self._idx = idx
 
     def _get_cache(self):
-        cache_stats = CacheStats(self._db_path)
+        cache_stats = CacheStats()
         return Cache(stats=cache_stats, strategy=self._cache_strategy)
 
     def _sizeof(self):
@@ -162,6 +159,7 @@ class CachedPartition(Partition):
 
     def get_tiles(self, crop_to=None, full_frames=False, mmap=False,
                   dest_dtype="float32", roi=None, target_size=None):
+        self._sidechannel
         sc_data = self.sidechannel['dataset']
 
         cache = self._get_cache()

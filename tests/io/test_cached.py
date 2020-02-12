@@ -8,6 +8,7 @@ import dask.distributed as dd
 from libertem.io.dataset.cached import CachedDataSet
 from libertem.io.cache.strategy import LRUCacheStrategy
 from libertem.api import Context
+from libertem.utils import SideChannel
 
 
 @pytest.fixture
@@ -42,6 +43,10 @@ def test_simple(default_cached_ds):
 
     print(p)
 
+    sidechannel = SideChannel()
+
+    p.set_sidechannel(sidechannel)
+
     t_cache = next(p.get_tiles())
     t_orig = next(next(default_raw.get_partitions()).get_tiles())
 
@@ -50,6 +55,7 @@ def test_simple(default_cached_ds):
     assert np.allclose(t_cache.data, t_orig.data)
 
     for p in default_cached_ds.get_partitions():
+        p.set_sidechannel(sidechannel)
         for tile in p.get_tiles():
             pass
 
@@ -57,7 +63,10 @@ def test_simple(default_cached_ds):
 def test_with_roi(default_cached_ds):
     roi = np.random.choice(a=[0, 1], size=tuple(default_cached_ds.shape.nav))
 
+    sidechannel = SideChannel()
+
     for p in default_cached_ds.get_partitions():
+        p.set_sidechannel(sidechannel)
         for tile in p.get_tiles(roi=roi):
             pass
 

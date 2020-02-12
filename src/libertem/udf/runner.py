@@ -60,6 +60,7 @@ class UDFRunner:
         return np.result_type(self._udf.get_preferred_input_dtype(), dtype)
 
     def run_for_partition(self, partition, roi, sidechannel):
+        partition.set_sidechannel(sidechannel)
         dtype = self._get_dtype(partition.dtype)
         meta = UDFMeta(
             partition_shape=partition.slice.adjust_for_roi(roi).shape,

@@ -392,8 +392,7 @@ class Partition(object):
     def sidechannel(self):
         return self._sidechannel
 
-    @sidechannel.setter
-    def sidechannel(self, new_sidechannel):
+    def set_sidechannel(self, new_sidechannel):
         self._sidechannel = new_sidechannel
 
     @property
