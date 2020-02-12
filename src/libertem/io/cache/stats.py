@@ -1,8 +1,4 @@
-import types
-from typing import Union, Set
 from collections import defaultdict
-import datetime
-import sqlite3
 import time
 
 
@@ -67,7 +63,8 @@ class StatsItem(CacheItem):
             utc timestamp of last access, use 0 if not known
         """
         self.hits = hits
-        self.last_acchess = last_access
+        self.last_access = last_access
+        self.eviction_timestamp = None
         super().__init__(*args, **kwargs)
 
     def hit(self):
@@ -78,8 +75,11 @@ class StatsItem(CacheItem):
         self.hits = 0
         return self.hits
 
-    def set_last_access(self, timestamp):
+    def set_last_access(self, timestamp: float):
         self.last_access = timestamp
+
+    def set_eviction_timestamp(self, timestamp: float):
+        self.eviction_timestamp = timestamp
 
 
 class CacheStats:
@@ -122,7 +122,8 @@ class CacheStats:
     def _remove_item(self, stats_item: CacheItem):
         self._all_items[stats_item.key()] = stats_item
         self._items_to_remove.add(stats_item)
-        self._items_to_add -= self._items_to_remove
+        if stats_item in self._items_to_add:
+            self._items_to_add.remove(stats_item)
         if stats_item in self._active_items:
             self._active_items.remove(stats_item)
 
@@ -151,6 +152,7 @@ class CacheStats:
         remove item from stats
         """
         stats_item = self._stats_item(cache_item)
+        stats_item.set_eviction_timestamp(timestamp)
         self._remove_item(stats_item)
 
     def get_active_items(self):
@@ -168,7 +170,22 @@ class CacheStats:
     def __exit__(self, *exc):
         pass
 
-    def merge(self, other_stats):
+    def merge(self, other_stats: 'CacheStats'):
+        """
+        Merge the stats from `other_stats` into our own stats.
+
+        Rules:
+
+        evicted_items = ...
+            # TODO: check timestamp of eviction, if last_access of the item
+            # is after eviction timestamp, keep the item
+
+        surviving_items = union(our_items, their_items) - evicted_items
+
+        for our_item, their_item in surviving_items:
+            new_hits = max(out_item.hits, their_item.hits)
+
+        """
         raise NotImplementedError()
 
     def serialize(self):
