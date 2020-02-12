@@ -73,3 +73,7 @@ def test_eviction(cs, ci):
     assert len(cs._items_to_remove) == 1
     assert len(cs._items_to_add) == 0
     assert len(cs._all_items.items()) == 1
+
+
+def test_merge(cs, ci):
+    pass

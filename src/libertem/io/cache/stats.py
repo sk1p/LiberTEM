@@ -176,7 +176,7 @@ class CacheStats:
 
         Rules:
 
-        evicted_items = ...
+        evicted_items = union(our_removed, their_removed)
             # TODO: check timestamp of eviction, if last_access of the item
             # is after eviction timestamp, keep the item
 
@@ -186,6 +186,7 @@ class CacheStats:
             new_hits = max(out_item.hits, their_item.hits)
 
         """
+        evicted_items = 
         raise NotImplementedError()
 
     def serialize(self):
