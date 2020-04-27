@@ -229,6 +229,11 @@ class UDFData:
         for k, buf in self._get_buffers():
             buf.flush()
 
+    def export(self):
+        # .. versionadded:: 0.6.0.dev0
+        for k, buf in self._get_buffers():
+            buf.export()
+
     def set_view_for_frame(self, partition, tile, frame_idx):
         for k, buf in self._get_buffers():
             if buf.roi_is_zero:
@@ -419,6 +424,10 @@ class UDFBase:
 
     def init_result_buffers(self):
         self.results = UDFData(self.get_result_buffers())
+
+    def export_results(self):
+        # .. versionadded:: 0.6.0.dev0
+        self.results.export()
 
     def set_meta(self, meta):
         self.meta = meta
@@ -889,6 +898,7 @@ class UDFRunner:
                 except TypeError:
                     raise TypeError("could not pickle results")
 
+            self._udf.export_results()
             return self._udf.results
 
     def _debug_task_pickling(self, tasks):
