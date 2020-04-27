@@ -850,12 +850,12 @@ class UDFRunner:
             for tile in tiles:
                 # FIXME the dataset should already load the tiles
                 # to the correct memory location
-                # Mocked for now for testing and development purposes
-                tile = self._udf.xp.asanyarray(tile)
+                # Mocked for now by converting to device array
+                # when calling process_...() for testing and development purposes
                 if method == 'tile':
                     self._udf.set_contiguous_views_for_tile(partition, tile)
                     self._udf.set_slice(tile.tile_slice)
-                    self._udf.process_tile(tile)
+                    self._udf.process_tile(self._udf.xp.asanyarray(tile))
                 elif method == 'frame':
                     tile_slice = tile.tile_slice
                     for frame_idx, frame in enumerate(tile):
@@ -866,11 +866,11 @@ class UDFRunner:
                         )
                         self._udf.set_slice(frame_slice)
                         self._udf.set_views_for_frame(partition, tile, frame_idx)
-                        self._udf.process_frame(frame)
+                        self._udf.process_frame(self._udf.xp.asanyarray(frame))
                 elif method == 'partition':
                     self._udf.set_views_for_tile(partition, tile)
                     self._udf.set_slice(partition.slice)
-                    self._udf.process_partition(tile)
+                    self._udf.process_partition(self._udf.xp.asanyarray(tile))
             self._udf.flush()
             if hasattr(self._udf, 'postprocess'):
                 self._udf.clear_views()
