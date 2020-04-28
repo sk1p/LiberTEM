@@ -635,7 +635,7 @@ class Context:
         return out
 
     def run_udf(self, dataset: DataSet, udf: UDF, roi: np.ndarray = None,
-                progress: bool = False) -> Dict[str, BufferWrapper]:
+                progress: bool = False, backends=None) -> Dict[str, BufferWrapper]:
         """
         Run :code:`udf` on :code:`dataset`, restricted to the region of interest :code:`roi`.
 
@@ -666,7 +666,13 @@ class Context:
             :meth:`__array__`. You can access the underlying numpy array using the
             :attr:`~libertem.common.buffers.BufferWrapper.data` property.
         """
-        return UDFRunner(udf).run_for_dataset(dataset, self.executor, roi, progress=progress)
+        return UDFRunner(udf).run_for_dataset(
+            dataset,
+            self.executor,
+            roi,
+            progress=progress,
+            backends=backends,
+        )
 
     def map(self, dataset: DataSet, f, roi: np.ndarray = None,
             progress: bool = False) -> BufferWrapper:

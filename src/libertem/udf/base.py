@@ -766,16 +766,19 @@ class Task(object):
 
 
 class UDFTask(Task):
-    def __init__(self, partition: Partition, idx, udf, roi):
+    def __init__(self, partition: Partition, idx, udf, roi, backends):
         super().__init__(partition=partition, idx=idx)
         self._roi = roi
         self._udf = udf
+        self._backends = backends
 
     def __call__(self):
         return UDFRunner(self._udf).run_for_partition(self.partition, self._roi)
 
     def get_resources(self):
         backends = self._udf.get_backends()
+        if self._backends is not None:
+            backends = set(backends).intersection(set(self._backends))
         if 'numpy' in backends and 'cupy' in backends:
             # Can be run on both CPU and CUDA workers
             return {'compute': 1}
@@ -913,7 +916,7 @@ class UDFRunner:
                 )
             )
 
-    def _prepare_run_for_dataset(self, dataset: DataSet, executor, roi):
+    def _prepare_run_for_dataset(self, dataset: DataSet, executor, roi, backends):
         self._check_preconditions(dataset, roi)
         meta = UDFMeta(
             partition_shape=None,
@@ -930,11 +933,11 @@ class UDFRunner:
             self._udf.set_views_for_dataset(dataset)
             self._udf.preprocess()
 
-        tasks = list(self._make_udf_tasks(dataset, roi))
+        tasks = list(self._make_udf_tasks(dataset, roi, backends))
         return tasks
 
-    def run_for_dataset(self, dataset: DataSet, executor, roi=None, progress=False):
-        tasks = self._prepare_run_for_dataset(dataset, executor, roi)
+    def run_for_dataset(self, dataset: DataSet, executor, roi=None, progress=False, backends=None):
+        tasks = self._prepare_run_for_dataset(dataset, executor, roi, backends)
         cancel_id = str(uuid.uuid4())
         self._debug_task_pickling(tasks)
 
@@ -974,7 +977,7 @@ class UDFRunner:
     def _roi_for_partition(self, roi, partition: Partition):
         return roi.reshape(-1)[partition.slice.get(nav_only=True)]
 
-    def _make_udf_tasks(self, dataset: DataSet, roi):
+    def _make_udf_tasks(self, dataset: DataSet, roi, backends):
         for idx, partition in enumerate(dataset.get_partitions()):
             if roi is not None:
                 roi_for_part = self._roi_for_partition(roi, partition)
@@ -982,4 +985,4 @@ class UDFRunner:
                     # roi is empty for this partition, ignore
                     continue
             udf = self._udf.copy_for_partition(partition, roi)
-            yield UDFTask(partition=partition, idx=idx, udf=udf, roi=roi)
+            yield UDFTask(partition=partition, idx=idx, udf=udf, roi=roi, backends=backends)
