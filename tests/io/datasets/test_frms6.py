@@ -7,6 +7,7 @@ import numpy as np
 
 from libertem.io.dataset.frms6 import (
     FRMS6DataSet, _map_y, FRMS6Decoder,
+    frms6_get_read_ranges,
 )
 from libertem.analysis.raw import PickFrameAnalysis
 from libertem.analysis.sum import SumAnalysis
@@ -202,3 +203,187 @@ def test_read_invalid_tileshape(default_frms6):
 
     with pytest.raises(ValueError):
         next(p.get_tiles(tiling_scheme=tiling_scheme))
+
+
+@pytest.mark.with_numba
+def test_frms6_read_ranges(default_frms6):
+    sig_shape = tuple(default_frms6.shape.sig)
+    tileshape = Shape(
+        (4, int(sig_shape[0] // 2), sig_shape[1]),
+        sig_dims=2
+    )
+    tiling_scheme = TilingScheme.make_for_shape(
+        tileshape=tileshape,
+        dataset_shape=default_frms6.shape,
+    )
+
+    fileset = default_frms6._get_fileset()
+
+    start_frame = 3
+    stop_before_frame = 7
+
+    tile_slices, read_ranges, scheme_indices = fileset.get_read_ranges(
+        start_at_frame=start_frame,
+        stop_before_frame=stop_before_frame,
+        dtype=default_frms6.raw_dtype,
+        tiling_scheme=tiling_scheme,
+        roi=None,
+    )
+
+    # result is two tiles, for the two slices in the tiling scheme:
+    assert tile_slices.shape == (2, 2, 3)
+    # frms6 has individual reads for each line, keep binning in mind!
+    assert read_ranges.shape == (2, 132, 3)
+    assert scheme_indices.shape == (2,)
+    assert np.allclose(scheme_indices, (0, 1))
+
+    # first tile:
+    assert np.allclose(tile_slices[0][0], (3, 0, 0))  # origin
+    assert np.allclose(tile_slices[0][1], (tiling_scheme.depth, 132, 264))  # shape
+    assert np.allclose(
+        # let's check the first 16 values:
+        read_ranges[0][:16],
+        [
+            # snapshot of known-good values:
+            # (file_index, start_bytes, end_bytes)
+            [0, 104800, 105328],
+            [0, 105856, 106384],
+            [0, 106912, 107440],
+            [0, 107968, 108496],
+            [0, 109024, 109552],
+            [0, 110080, 110608],
+            [0, 111136, 111664],
+            [0, 112192, 112720],
+            [0, 113248, 113776],
+            [0, 114304, 114832],
+            [0, 115360, 115888],
+            [0, 116416, 116944],
+            [0, 117472, 118000],
+            [0, 118528, 119056],
+            [0, 119584, 120112],
+            [0, 120640, 121168]
+        ],
+    )
+
+    # second tile:
+    assert np.allclose(tile_slices[1][0], (3, 132, 0))  # origin
+    assert np.allclose(tile_slices[1][1], (tiling_scheme.depth, 132, 264))  # shape
+    assert np.allclose(
+        # let's check the first 16 values:
+        read_ranges[1][:16],
+        [
+            # snapshot of known-good values:
+            # (note that they are in descending order because of the
+            # folding of data in frms6)
+            # (file_index, start_bytes, end_bytes)
+            [0, 139120, 139648],
+            [0, 138064, 138592],
+            [0, 137008, 137536],
+            [0, 135952, 136480],
+            [0, 134896, 135424],
+            [0, 133840, 134368],
+            [0, 132784, 133312],
+            [0, 131728, 132256],
+            [0, 130672, 131200],
+            [0, 129616, 130144],
+            [0, 128560, 129088],
+            [0, 127504, 128032],
+            [0, 126448, 126976],
+            [0, 125392, 125920],
+            [0, 124336, 124864],
+            [0, 123280, 123808]
+        ],
+    )
+
+
+def test_frms6_read_ranges_with_roi(default_frms6):
+    roi = np.zeros(np.prod(default_frms6.shape.nav), dtype=bool)
+    roi[::2] = True  # select every second frame
+
+    sig_shape = tuple(default_frms6.shape.sig)
+    tileshape = Shape(
+        (4, int(sig_shape[0] // 2), sig_shape[1]),
+        sig_dims=2
+    )
+    tiling_scheme = TilingScheme.make_for_shape(
+        tileshape=tileshape,
+        dataset_shape=default_frms6.shape,
+    )
+
+    fileset = default_frms6._get_fileset()
+
+    start_frame = 3
+    stop_before_frame = 7
+
+    tile_slices, read_ranges, scheme_indices = fileset.get_read_ranges(
+        start_at_frame=start_frame,
+        stop_before_frame=stop_before_frame,
+        dtype=default_frms6.raw_dtype,
+        tiling_scheme=tiling_scheme,
+        roi=roi,
+    )
+
+    # result is two tiles, for the two slices in the tiling scheme:
+    assert tile_slices.shape == (2, 2, 3)
+    # frms6 has individual reads for each line, keep binning in mind!
+    assert read_ranges.shape == (2, 66, 3)
+    assert scheme_indices.shape == (2,)
+    assert np.allclose(scheme_indices, (0, 1))
+
+    # first tile:
+    assert np.allclose(tile_slices[0][0], (2, 0, 0))  # origin
+    assert np.allclose(tile_slices[0][1], (tiling_scheme.depth // 2, 132, 264))  # shape
+    assert np.allclose(
+        # let's check the first 16 values:
+        read_ranges[0][:16],
+        [
+            # snapshot of known-good values:
+            # (file_index, start_bytes, end_bytes)
+            [0, 139712, 140240],
+            [0, 140768, 141296],
+            [0, 141824, 142352],
+            [0, 142880, 143408],
+            [0, 143936, 144464],
+            [0, 144992, 145520],
+            [0, 146048, 146576],
+            [0, 147104, 147632],
+            [0, 148160, 148688],
+            [0, 149216, 149744],
+            [0, 150272, 150800],
+            [0, 151328, 151856],
+            [0, 152384, 152912],
+            [0, 153440, 153968],
+            [0, 154496, 155024],
+            [0, 155552, 156080]
+        ],
+    )
+
+    # second tile:
+    assert np.allclose(tile_slices[1][0], (2, 132, 0))  # origin
+    assert np.allclose(tile_slices[1][1], (tiling_scheme.depth // 2, 132, 264))  # shape
+    assert np.allclose(
+        # let's check the first 16 values:
+        read_ranges[1][:16],
+        [
+            # snapshot of known-good values:
+            # (note that they are in descending order because of the
+            # folding of data in frms6)
+            # (file_index, start_bytes, end_bytes)
+            [0, 174032, 174560],
+            [0, 172976, 173504],
+            [0, 171920, 172448],
+            [0, 170864, 171392],
+            [0, 169808, 170336],
+            [0, 168752, 169280],
+            [0, 167696, 168224],
+            [0, 166640, 167168],
+            [0, 165584, 166112],
+            [0, 164528, 165056],
+            [0, 163472, 164000],
+            [0, 162416, 162944],
+            [0, 161360, 161888],
+            [0, 160304, 160832],
+            [0, 159248, 159776],
+            [0, 158192, 158720]
+        ],
+    )

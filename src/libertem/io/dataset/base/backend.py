@@ -23,11 +23,10 @@ class IOBackend:
 _r_n_d_cache = {}
 
 
-def _make_mmap_reader_and_decoder(decode):
+def _make_mmap_reader_and_decoder(decode, enable_jit=True, name=None):
     """
     decode: from inp, in bytes, possibly interpreted as native_dtype, to out.dtype
     """
-    @numba.njit(boundscheck=False)
     def _tilereader_w_copy(outer_idx, mmaps, sig_dims, tile_read_ranges,
                            out_decoded, native_dtype, do_zero,
                            origin, shape, ds_shape):
@@ -49,7 +48,35 @@ def _make_mmap_reader_and_decoder(decode):
                 ds_shape=ds_shape,
             )
         return out_decoded
+    if enable_jit:
+        _tilereader_w_copy = numba.njit(boundscheck=False)(_tilereader_w_copy)
+    if name is not None:
+        _tilereader_w_copy.__name__ = name
     return _tilereader_w_copy
+
+
+@numba.njit(cache=False)
+def _decode_as_param(decode, outer_idx, mmaps, sig_dims, tile_read_ranges,
+                     out_decoded, native_dtype, do_zero,
+                     origin, shape, ds_shape):
+    if do_zero:
+        out_decoded[:] = 0
+    for rr_idx in range(tile_read_ranges.shape[0]):
+        rr = tile_read_ranges[rr_idx]
+        if rr[1] == rr[2] == 0:
+            break
+        memmap = mmaps[rr[0]]
+        decode(
+            inp=memmap[rr[1]:rr[2]],
+            out=out_decoded,
+            idx=rr_idx,
+            native_dtype=native_dtype,
+            rr=rr,
+            origin=origin,
+            shape=shape,
+            ds_shape=ds_shape,
+        )
+    return out_decoded
 
 
 class LocalFSMMapBackend(IOBackend):
