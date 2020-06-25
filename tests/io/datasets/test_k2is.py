@@ -333,3 +333,69 @@ def test_k2is_dist(dist_ctx):
     analysis = dist_ctx.create_sum_analysis(dataset=ds)
     results = dist_ctx.run(analysis, roi=roi)
     assert results[0].raw_data.shape == (1860, 2048)
+
+
+def test_k2is_read_ranges(default_k2is):
+    # make sure we have more than one block per tile (n_blocks_x==2)
+    tileshape = Shape(
+        (2, 930, 32),
+        sig_dims=2
+    )
+    tiling_scheme = TilingScheme.make_for_shape(
+        tileshape=tileshape,
+        dataset_shape=default_k2is.shape,
+    )
+
+    fileset = default_k2is._get_fileset()
+
+    start_frame = 3
+    stop_before_frame = 7
+
+    tile_slices, read_ranges, scheme_indices = fileset.get_read_ranges(
+        start_at_frame=start_frame,
+        stop_before_frame=stop_before_frame,
+        dtype=np.dtype("uint16"),
+        tiling_scheme=tiling_scheme,
+        roi=None,
+    )
+
+    # result is 2*128 tiles:
+    assert tile_slices.shape == (2*128, 2, 3)
+    # NOTE: k2is has additional entries in the last dimension!
+    # NOTE: two blcoks per frame per tile are read
+    assert read_ranges.shape == (2*128, 4, 7)
+    assert scheme_indices.shape == (256,)
+    assert np.allclose(scheme_indices, 2*list(range(128)))
+
+    # NOTE: we just check the first two tiles here
+    # first tile:
+    assert np.allclose(tile_slices[0][0], (3, 0, 0))  # origin
+    assert np.allclose(tile_slices[0][1], (tiling_scheme.depth, 930, 32))  # shape
+    assert np.allclose(
+        read_ranges[0],
+        [
+            # snapshot of known-good values:
+            # (sector_id, start, stop, n_blocks_y, n_blocks_x, block_y_i, block_x_i)
+            [0, 2482000, 2504320,       1,       2,       0,       0],
+            [0, 2459640, 2481960,       1,       2,       0,       1],
+            [0, 3197520, 3219840,       1,       2,       0,       0],
+            [0, 3175160, 3197480,       1,       2,       0,       1]
+        ],
+    )
+
+    # second tile:
+    assert np.allclose(tile_slices[1][0], (3, 0, 32))  # origin
+    assert np.allclose(tile_slices[1][1], (tiling_scheme.depth, 930, 32))  # shape
+    assert np.allclose(
+        read_ranges[1],
+        [
+            # snapshot of known-good values:
+            # (note that they are in descending order because of the
+            # folding of data in frms6)
+            # (sector_id, start, stop, n_blocks_y, n_blocks_x, block_y_i, block_x_i)
+            [0, 2437280, 2459600,       1,       2,       0,       0],
+            [0, 2414920, 2437240,       1,       2,       0,       1],
+            [0, 3152800, 3175120,       1,       2,       0,       0],
+            [0, 3130440, 3152760,       1,       2,       0,       1]
+        ],
+    )

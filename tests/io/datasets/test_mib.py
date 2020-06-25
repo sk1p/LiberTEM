@@ -6,7 +6,9 @@ from unittest import mock
 import numpy as np
 import pytest
 
-from libertem.io.dataset.mib import MIBDataSet
+from libertem.io.dataset.mib import (
+    MIBDataSet, mib_r_get_read_ranges, mib_r24_get_read_ranges,
+)
 from libertem.job.masks import ApplyMasksJob
 from libertem.job.raw import PickFrameJob
 from libertem.udf.raw import PickUDF
@@ -263,3 +265,179 @@ def test_not_too_many_files(lt_ctx):
             ds._filenames()
 
     assert len(record) == 0
+
+
+@pytest.mark.with_numba
+def test_mib_r1_read_ranges():
+    sig_shape = (256, 256)
+    dataset_shape = Shape(
+        (16, 16, 256, 256),
+        sig_dims=2
+    )
+    tileshape = Shape(
+        (int(sig_shape[0] // 2), sig_shape[1]),
+        sig_dims=2
+    )
+    tiling_scheme = TilingScheme.make_for_shape(
+        tileshape=tileshape,
+        dataset_shape=dataset_shape,
+    )
+
+    slices_arr = tiling_scheme.slices_array
+    frame_header_bytes = 384
+    frame_footer_bytes = 0
+    bpp = 8
+    depth = 4
+    start_frame = 3
+    stop_before_frame = 7
+    num_files = 4
+
+    fileset_arr = np.zeros((num_files, 4), dtype=np.int64)
+    #                (start, stop, fileset index, file_header_bytes)
+    fileset_arr[0] = (0,    4, 0, 0)
+    fileset_arr[1] = (4,    8, 1, 0)
+    fileset_arr[2] = (8,   12, 2, 0)
+    fileset_arr[3] = (12, 256, 3, 0)
+
+    tile_slices, read_ranges, scheme_indices = mib_r_get_read_ranges(
+        start_at_frame=start_frame,
+        stop_before_frame=stop_before_frame,
+        roi=None,
+        depth=depth,
+        slices_arr=slices_arr,
+        fileset_arr=fileset_arr,
+        sig_shape=sig_shape,
+        bpp=bpp,
+        extra=None,
+        frame_header_bytes=frame_header_bytes,
+        frame_footer_bytes=frame_footer_bytes,
+    )
+
+    # result is two tiles, for the two slices in the tiling scheme:
+    assert tile_slices.shape == (2, 2, 3)
+    assert read_ranges.shape == (2, depth, 3)
+    assert scheme_indices.shape == (2,)
+    assert np.allclose(scheme_indices, (0, 1))
+
+    # first tile:
+    assert np.allclose(tile_slices[0][0], (3, 0, 0))  # origin
+    assert np.allclose(tile_slices[0][1], (depth, 128, 256))  # shape
+    assert np.allclose(
+        read_ranges[0],
+        [
+            # snapshot of known-good values:
+            # (file_index, start_bytes, end_bytes)
+
+            [0, 26112, 30208],
+            [1,   384,  4480],
+            [1,  8960, 13056],
+            [1, 17536, 21632],
+        ],
+    )
+
+    # second tile:
+    assert np.allclose(tile_slices[1][0], (3, 128, 0))  # origin
+    assert np.allclose(tile_slices[1][1], (depth, 128, 256))  # shape
+    assert np.allclose(
+        read_ranges[1],
+        [
+            # snapshot of known-good values:
+            # (file_index, start_bytes, end_bytes)
+            [0, 30208, 34304],
+            [1,  4480,  8576],
+            [1, 13056, 17152],
+            [1, 21632, 25728],
+        ],
+    )
+
+
+@pytest.mark.with_numba
+def test_mib_r24_read_ranges():
+    sig_shape = (256, 256)
+    dataset_shape = Shape(
+        (16, 16, 256, 256),
+        sig_dims=2
+    )
+    tileshape = Shape(
+        (int(sig_shape[0] // 2), sig_shape[1]),
+        sig_dims=2
+    )
+    tiling_scheme = TilingScheme.make_for_shape(
+        tileshape=tileshape,
+        dataset_shape=dataset_shape,
+    )
+
+    slices_arr = tiling_scheme.slices_array
+    frame_header_bytes = 384
+    frame_footer_bytes = 0
+    bpp = 8
+    depth = 4
+    start_frame = 3
+    stop_before_frame = 7
+    num_files = 4
+
+    fileset_arr = np.zeros((num_files, 4), dtype=np.int64)
+    #                (start, stop, fileset index, file_header_bytes)
+    fileset_arr[0] = (0,    4, 0, 0)
+    fileset_arr[1] = (4,    8, 1, 0)
+    fileset_arr[2] = (8,   12, 2, 0)
+    fileset_arr[3] = (12, 256, 3, 0)
+
+    tile_slices, read_ranges, scheme_indices = mib_r24_get_read_ranges(
+        start_at_frame=start_frame,
+        stop_before_frame=stop_before_frame,
+        roi=None,
+        depth=depth,
+        slices_arr=slices_arr,
+        fileset_arr=fileset_arr,
+        sig_shape=sig_shape,
+        bpp=bpp,
+        extra=None,
+        frame_header_bytes=frame_header_bytes,
+        frame_footer_bytes=frame_footer_bytes,
+    )
+
+    # result is two tiles, for the two slices in the tiling scheme:
+    assert tile_slices.shape == (2, 2, 3)
+    # r24 has two frames after another, so we have double the amount of read ranges
+    assert read_ranges.shape == (2, 2*depth, 3)
+    assert scheme_indices.shape == (2,)
+    assert np.allclose(scheme_indices, (0, 1))
+
+    # first tile:
+    assert np.allclose(tile_slices[0][0], (3, 0, 0))  # origin
+    assert np.allclose(tile_slices[0][1], (depth, 128, 256))  # shape
+    assert np.allclose(
+        read_ranges[0],
+        [
+            # snapshot of known-good values:
+            # (file_index, start_bytes, end_bytes)
+            [0, 1574400, 1836544],
+            [0, 2098688, 2360832],
+            [1,     384,  262528],
+            [1,  524672,  786816],
+            [1,  525056,  787200],
+            [1, 1049344, 1311488],
+            [1, 1049728, 1311872],
+            [1, 1574016, 1836160]
+        ],
+    )
+
+    # second tile:
+    assert np.allclose(tile_slices[1][0], (3, 128, 0))  # origin
+    assert np.allclose(tile_slices[1][1], (depth, 128, 256))  # shape
+    assert np.allclose(
+        read_ranges[1],
+        [
+            # snapshot of known-good values:
+            # (file_index, start_bytes, end_bytes)
+            [0, 1836544, 2098688],
+            [0, 2360832, 2622976],
+            [1,  262528,  524672],
+            [1,  786816, 1048960],
+            [1,  787200, 1049344],
+            [1, 1311488, 1573632],
+            [1, 1311872, 1574016],
+            [1, 1836160, 2098304]
+        ],
+    )
