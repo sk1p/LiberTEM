@@ -296,6 +296,7 @@ def test_frms6_read_ranges(default_frms6):
     )
 
 
+@pytest.mark.with_numba
 def test_frms6_read_ranges_with_roi(default_frms6):
     roi = np.zeros(np.prod(default_frms6.shape.nav), dtype=bool)
     roi[::2] = True  # select every second frame

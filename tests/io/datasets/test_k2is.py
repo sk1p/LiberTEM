@@ -335,6 +335,7 @@ def test_k2is_dist(dist_ctx):
     assert results[0].raw_data.shape == (1860, 2048)
 
 
+@pytest.mark.with_numba
 def test_k2is_read_ranges(default_k2is):
     # make sure we have more than one block per tile (n_blocks_x==2)
     tileshape = Shape(
