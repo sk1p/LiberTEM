@@ -1,10 +1,12 @@
 import os
 import mmap
 import logging
+import functools
 
 import numba
 import numpy as np
 from numba.typed import List
+from numba.experimental import jitclass
 
 from libertem.common import Shape, Slice
 from libertem.common.buffers import BufferPool
@@ -30,6 +32,9 @@ def _make_mmap_reader_and_decoder(decode, enable_jit=True, name=None):
     def _tilereader_w_copy(outer_idx, mmaps, sig_dims, tile_read_ranges,
                            out_decoded, native_dtype, do_zero,
                            origin, shape, ds_shape):
+        """
+        Read and decode a single tile
+        """
         if do_zero:
             out_decoded[:] = 0
         for rr_idx in range(tile_read_ranges.shape[0]):
@@ -77,6 +82,45 @@ def _decode_as_param(decode, outer_idx, mmaps, sig_dims, tile_read_ranges,
             ds_shape=ds_shape,
         )
     return out_decoded
+
+
+@jitclass([])
+class Decoder:
+    def __init__(self):
+        pass
+
+    def decode(self, inp, out, idx, native_dtype, rr, origin, shape, ds_shape):
+        out[idx, :] = inp.view(native_dtype)
+
+
+@numba.njit(cache=True)
+def _decode_as_cls(decoder, outer_idx, mmaps, sig_dims, tile_read_ranges,
+                   out_decoded, native_dtype, do_zero,
+                   origin, shape, ds_shape):
+    if do_zero:
+        out_decoded[:] = 0
+    for rr_idx in range(tile_read_ranges.shape[0]):
+        rr = tile_read_ranges[rr_idx]
+        if rr[1] == rr[2] == 0:
+            break
+        memmap = mmaps[rr[0]]
+        decoder.decode(
+            inp=memmap[rr[1]:rr[2]],
+            out=out_decoded,
+            idx=rr_idx,
+            native_dtype=native_dtype,
+            rr=rr,
+            origin=origin,
+            shape=shape,
+            ds_shape=ds_shape,
+        )
+    return out_decoded
+
+
+_decoder = Decoder()
+
+r_n_d_cls = functools.partial(_decode_as_cls, decoder=_decoder)
+r_n_d_cls.__name__ = "r_n_d_as_cls"
 
 
 class LocalFSMMapBackend(IOBackend):
