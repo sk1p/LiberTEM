@@ -168,6 +168,9 @@ def test_read_decode_k2is_1(benchmark, r_n_d):
     r_n_d_k2is, r_n_d_k2is_nojit,
 ])
 def test_read_decode_k2is_2(benchmark, r_n_d):
+    """
+    same as above, but depth=4 instead of 8
+    """
     BLOCK_SHAPE = (930, 16)
     HEADER_SIZE = 40
     BLOCK_SIZE = 0x5758
@@ -175,6 +178,7 @@ def test_read_decode_k2is_2(benchmark, r_n_d):
     inp = np.random.randn(8*BLOCK_SIZE).astype(np.uint8)
     out = np.zeros((8,) + BLOCK_SHAPE, dtype=np.float64).reshape((4, 930*32))
 
+    # (sector_mmap, start, stop, n_blocks_y, n_blocks_x, block_y_i, block_x_i)
     rr = np.array([
         [0, 0*BLOCK_SIZE, 1*DATA_SIZE, 1, 2, 0, 0],
         [0, 1*BLOCK_SIZE, 2*DATA_SIZE, 1, 2, 0, 1],
