@@ -171,9 +171,19 @@ def _k2is_read_ranges_tile_block(
     return result
 
 
-k2is_get_read_ranges = make_get_read_ranges(
-    read_ranges_tile_block=_k2is_read_ranges_tile_block
-)
+
+
+
+def k2is_get_read_ranges(
+    start_at_frame, stop_before_frame, roi, depth,
+    slices_arr, fileset_arr, sig_shape,
+    bpp, extra=None, frame_header_bytes=0, frame_footer_bytes=0,
+):
+    pass
+
+# k2is_get_read_ranges = make_get_read_ranges(
+#     read_ranges_tile_block=_k2is_read_ranges_tile_block
+# )
 
 
 def _pattern(path):

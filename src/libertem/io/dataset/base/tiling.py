@@ -274,7 +274,7 @@ def make_get_read_ranges(
         where the last dimension contains: file index, start_byte, stop_byte
     """
 
-    @numba.njit(boundscheck=True)
+    @numba.njit(boundscheck=True, cache=True)
     def _get_read_ranges_inner(
         start_at_frame, stop_before_frame, roi, depth,
         slices_arr, fileset_arr, sig_shape,
@@ -665,3 +665,70 @@ class Negotiator:
         elif udf_method == "tile":
             return self._get_udf_depth_pref(udf, partition)
         return 1
+
+
+@numba.njit(inline='always')
+def _mib_r_px_to_bytes(
+    bpp, frame_in_file_idx, slice_sig_size, sig_size, sig_origin,
+    frame_footer_bytes, frame_header_bytes,
+    file_idx, read_ranges,
+):
+    # NOTE: bpp is not used, instead we divide by 8 because we have 8 pixels per byte!
+
+    # we are reading a part of a single frame, so we first need to find
+    # the offset caused by headers and footers:
+    footer_offset = frame_footer_bytes * frame_in_file_idx
+    header_offset = frame_header_bytes * (frame_in_file_idx + 1)
+    byte_offset = footer_offset + header_offset
+
+    # now let's figure in the current frame index:
+    # (go down into the file by full frames; `sig_size`)
+    offset = byte_offset + frame_in_file_idx * sig_size // 8
+
+    # offset in px in the current frame:
+    sig_origin_bytes = sig_origin // 8
+
+    start = offset + sig_origin_bytes
+
+    # size of the sig part of the slice:
+    sig_size_bytes = slice_sig_size // 8
+
+    stop = start + sig_size_bytes
+    read_ranges.append((file_idx, start, stop))
+
+
+@numba.njit(inline='always')
+def _mib_r24_px_to_bytes(
+    bpp, frame_in_file_idx, slice_sig_size, sig_size, sig_origin,
+    frame_footer_bytes, frame_header_bytes,
+    file_idx, read_ranges,
+):
+    # we are reading a part of a single frame, so we first need to find
+    # the offset caused by headers and footers:
+    footer_offset = frame_footer_bytes * frame_in_file_idx
+    header_offset = frame_header_bytes * (frame_in_file_idx + 1)
+    byte_offset = footer_offset + header_offset
+
+    # now let's figure in the current frame index:
+    # (go down into the file by full frames; `sig_size`)
+    offset = byte_offset + frame_in_file_idx * sig_size * bpp
+
+    # offset in px in the current frame:
+    sig_origin_bytes = sig_origin * bpp
+
+    start = offset + sig_origin_bytes
+
+    # size of the sig part of the slice:
+    sig_size_bytes = slice_sig_size * bpp
+
+    stop = start + sig_size_bytes
+    read_ranges.append((file_idx, start, stop))
+
+    # this is the addition for medipix 24bit raw:
+    # we read the part from the "second 12bit frame"
+    second_frame_offset = sig_size * bpp
+    read_ranges.append((file_idx, start + second_frame_offset, stop + second_frame_offset))
+
+
+mib_r_get_read_ranges = make_get_read_ranges(px_to_bytes=_mib_r_px_to_bytes)
+mib_r24_get_read_ranges = make_get_read_ranges(px_to_bytes=_mib_r24_px_to_bytes)
