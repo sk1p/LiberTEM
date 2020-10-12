@@ -23,7 +23,7 @@ class JobExecutor(object):
 
     def run_function(self, fn, *args, **kwargs):
         """
-        run a callable `fn`
+        run a callable `fn` on any worker
         """
         raise NotImplementedError()
 
@@ -82,6 +82,10 @@ class JobExecutor(object):
         """
         raise NotImplementedError()
 
+    def run_each_worker(self, fn, *args, **kwargs):
+        # TODO: docs
+        raise NotImplementedError()
+
     def close(self):
         """
         cleanup resources used by this executor, if any
@@ -124,7 +128,7 @@ class AsyncJobExecutor(object):
 
     async def run_function(self, fn, *args, **kwargs):
         """
-        Run a callable `fn`
+        Run a callable `fn` on any worker
         """
         raise NotImplementedError()
 
@@ -147,6 +151,9 @@ class AsyncJobExecutor(object):
         raise NotImplementedError()
 
     async def run_each_host(self, fn, *args, **kwargs):
+        raise NotImplementedError()
+
+    async def run_each_worker(self, fn, *args, **kwargs):
         raise NotImplementedError()
 
     async def close(self):
@@ -267,6 +274,10 @@ class AsyncAdapter(AsyncJobExecutor):
 
     async def run_each_host(self, fn, *args, **kwargs):
         fn_with_args = functools.partial(self._wrapped.run_each_host, fn, *args, **kwargs)
+        return await sync_to_async(fn_with_args, self._pool)
+
+    async def run_each_worker(self, fn, *args, **kwargs):
+        fn_with_args = functools.partial(self._wrapped.run_each_worker, fn, *args, **kwargs)
         return await sync_to_async(fn_with_args, self._pool)
 
     async def close(self):
