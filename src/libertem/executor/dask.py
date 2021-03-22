@@ -34,13 +34,20 @@ def worker_setup(resource, device):
         raise ValueError("Unknown resource %s, use 'CUDA' or 'CPU'", resource)
 
 
+shm = threading.local()
+
+
 class SHMManager:
     def __init__(self):
         self._plasma_client = plasma.connect("/tmp/plasma")
 
     @classmethod
     def get_instance(cls):
-        return SHMManager()
+        if hasattr(shm, 'instance'):
+            return shm.instance
+        instance = cls()
+        shm.instance = instance
+        return instance
 
     @classmethod
     def make_random_id(cls):
@@ -66,8 +73,89 @@ class SHMManager:
 
     def is_object_id(self, obj_id):
         res = isinstance(obj_id, plasma.ObjectID)
-        print("is_object_id? %s %s" % (obj_id, res))
         return res
+
+
+gpu_mm = threading.local()
+
+
+class GPUMemManager:
+    """
+    Singleton to keep GPU buffers across task runs.
+
+    Can be used by the `UDFRunner`: instead of directly
+    getting data from the partition, use this layer.
+    
+    Freedom for optimizations: can use multiple streams
+    to overlap computation and communication. Can use
+    unified memory to replace our LRU with letting the driver
+    manage these things.
+
+    Assumptions:
+    - one worker per GPU, same thread is used for each worker
+    - partitions are static across task runs
+    - partitions are small enough to fit into GPU memory
+    """
+    def __init__(self):
+        # "kv store" of references to GPU memory buffers, they get cleaned up
+        # by GC when the worker is torn down
+        self._buffers = {}
+
+    @classmethod
+    def get_instance(cls):
+        if hasattr(gpu_mm, 'instance'):
+            return gpu_mm.instance
+        instance = cls()
+        gpu_mm.instance = instance
+        return instance
+
+    def __contains__(self, key):
+        return key in self._buffers
+
+    def __getitem__(self, key):
+        # TODO: update some stats for LRU?
+        return self._buffers[key]
+
+    def __setitem__(self, key, value):
+        self._buffers[key] = value
+
+    def have_space_for(self, partition, dtype):
+        raise NotImplementedError()  # TODO: query GPU for buffer
+
+    def allocate_buffer(self, partition):
+        raise NotImplementedError()  # TODO: cupy.array?
+
+    def evict_for(self, partition):
+        raise NotImplementedError()  # TODO: evict least-recently-used partition
+
+    def get_buffer_for_partition(self, partition, dtype):
+        # FIXME: proper cache key for partitions etc.
+        ps = partition.slice
+        cache_key = (ps.origin[0], ps.shape[0])
+
+        if cache_key in self:
+            return self[cache_key]
+
+        if not self.have_space_for(partition, dtype):
+            self.evict_for(partition)
+        buf = self[cache_key] = self.allocate_buffer(partition)
+        return buf
+
+    @contextmanager
+    def read_partition(self, partition, dtype):
+        buf = self.get_buffer_for_partition(partition, dtype)
+        if buf is not None:
+            return buf
+        else:
+            buf = self.allocate_buffer(partition, dtype)
+        # potential for fine-grained parallelism here!
+        # FIXME: write decoded data to disk? mmap?
+        for tile in partition.get_tiles(...):
+            slice_ = ...  # TODO: partition-local coordinates
+            buf[slice_.get()] = tile
+        self.lock(buf)
+        yield buf
+        self.unlock(buf)
 
 
 def cluster_spec(cpus, cudas, has_cupy, name='default', num_service=1, options=None):
@@ -446,7 +534,7 @@ class DaskJobExecutor(CommonDaskMixin, JobExecutor):
 
     def send_constant_data(self, data):
         def _put_into_shm(data, obj_id):
-            shm = SHMManager()
+            shm = SHMManager.get_instance()
             return shm.put(data, obj_id)
 
         # data is a List[Dict[str, ...]]
