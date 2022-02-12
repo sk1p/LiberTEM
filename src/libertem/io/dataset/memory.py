@@ -99,7 +99,7 @@ class MemBackendImpl(MMapBackendImpl):
                     ):
                         data = tile.astype(read_dtype)
                         self.preprocess(data, tile.tile_slice, corrections)
-                        yield data
+                        yield DataTile(data, tile.tile_slice, tile.scheme_idx)
                 else:
                     for tile in self._get_tiles_w_copy(
                         tiling_scheme=tiling_scheme,
@@ -122,7 +122,7 @@ class MemBackendImpl(MMapBackendImpl):
                 ):
                     data = tile.astype(read_dtype)
                     self.preprocess(data, tile.tile_slice, corrections)
-                    yield data
+                    yield DataTile(data, tile.tile_slice, tile.scheme_idx)
 
 
 class MemDatasetParams(MessageConverter):
