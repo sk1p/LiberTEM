@@ -101,6 +101,12 @@ be calculated.
         sl = c.get(key=tile_slice, transpose=False)
         self.results.corr[:] += sl.dot(tile_t).T
 
+Note the use of :attr:`libertem.udf.base.UDF.meta` - this is an instance of
+:class:`libertem.udf.base.UDFMeta`, which give you information about the data set
+and about the context of the current computation. For example,
+:attr:`libertem.udf.base.UDFMeta.coordinates` gives you an array of coordinates
+for the current tile.
+
 .. _`udf post processing`:
 
 Partition processing

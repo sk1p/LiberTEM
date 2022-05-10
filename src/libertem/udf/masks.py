@@ -7,9 +7,9 @@ from libertem.common.numba import rmatmul
 
 class ApplyMasksUDF(UDF):
     '''
-    Apply masks to signals/frames in the dataset. This can not only be used to integrate
-    over regions with a binary mask - the integration can be weighted by using
-    float or complex valued masks.
+    Apply masks to signals/frames in the dataset. This integrates over the
+    region selected by the mask. The values in the mask can also be something
+    other than 0 or 1, to weigh the integration by float or complex values.
 
     The result will be returned in a single sig-shaped buffer called intensity.
     Its shape will be :code:`(*nav_shape, len(masks))`.
