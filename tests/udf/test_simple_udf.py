@@ -2,6 +2,7 @@ import pickle
 
 import numpy as np
 import pytest
+from libertem.common.array_backends import BACKENDS
 
 from libertem.udf.base import UDF, NoOpUDF, UDFPartRunner, UDFParams, UDFMeta
 from libertem.common.executor import Environment
@@ -620,6 +621,7 @@ def test_noncontiguous_tiles(lt_ctx, backend):
             partition=partition,
             params=params,
             env=Environment(threads_per_worker=1, threaded_executor=False),
+            backend_choice=BACKENDS,
         )
 
     finally:
