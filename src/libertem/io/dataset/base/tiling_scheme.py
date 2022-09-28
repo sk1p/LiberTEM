@@ -188,6 +188,8 @@ class Negotiator:
     ):
         sig_shape = shape[1:]
 
+        return True
+
         # we need some wiggle room with the size, because there may be a harder
         # lower size value for some cases (for example HDF5, which overrides
         # some of the sizing negotiation we are doing here)
