@@ -87,17 +87,34 @@ class TestUseSharedExecutor:
         ctx.run_udf(udf=udf, dataset=ds)
 
         if drop == "cold_cache":
-            drop_cache(flist)
+            def setup():
+                drop_cache(flist)
+
+            def dostuff(**kwargs):
+                ctx.run_udf(**kwargs)
+
         elif drop == "warm_cache":
             warmup_cache(flist)
+
+            def setup():
+                pass
+
+            def dostuff(**kwargs):
+                ctx.run_udf(**kwargs)
+
         else:
             raise ValueError("bad param")
 
         benchmark.pedantic(
-            ctx.run_udf, kwargs=dict(udf=udf, dataset=ds),
-            warmup_rounds=0,
-            rounds=1,
-            iterations=1
+            dostuff,
+            setup=setup,
+            warmup_rounds=1,
+            rounds=5,
+            iterations=1,
+            kwargs=dict(
+                udf=udf,
+                dataset=ds,
+            ),
         )
 
     @pytest.mark.benchmark(
@@ -135,18 +152,41 @@ class TestUseSharedExecutor:
         ctx.run_udf(udf=udf, dataset=ds)
 
         if drop == "cold_cache":
-            drop_cache(flist)
+
+            def setup():
+                drop_cache(flist)
+
+            def dostuff(**kwargs):
+                ctx.run_udf(**kwargs)
+
         elif drop == "warm_cache":
             warmup_cache(flist)
+
+            def setup():
+                pass
+
+            def dostuff(**kwargs):
+                ctx.run_udf(**kwargs)
+
         else:
             raise ValueError("bad param")
 
         benchmark.pedantic(
-            ctx.run_udf, kwargs=dict(udf=udf, dataset=ds, roi=sparse_roi),
-            warmup_rounds=0,
-            rounds=1,
-            iterations=1,
+            dostuff,
+            setup=setup,
+            kwargs=dict(
+                udf=udf,
+                dataset=ds,
+                roi=sparse_roi,
+            )
         )
+
+        # benchmark(
+        #     dostuff,
+        #     udf=udf,
+        #     dataset=ds,
+        #     roi=sparse_roi,
+        # )
 
 
 @pytest.mark.benchmark(

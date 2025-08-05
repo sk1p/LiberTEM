@@ -20,14 +20,18 @@ _mk_dask_from_delayed = utils_dask._mk_dask_from_delayed
 
 
 # (100, 100, 1216, 1216) by default
-nblock_params = ((100, 1, 1, 1),
-                 (50, 1, 1, 1),
-                 (25, 1, 1, 1),
-                 (10, 1, 1, 1),
-                 (4, 1, 1, 1),
-                 (100, 25, 1, 1),
-                 (100, 4, 1, 1),
-                 (20, 1, 2, 2))
+nblock_params = (
+    (100, 1, 1, 1),
+    (50, 1, 1, 1),
+    (25, 1, 1, 1),
+    (100, 25, 1, 1),
+    (100, 4, 1, 1),
+
+    # These nblock values are unstable and cause workers to be killed:
+    # (10, 1, 1, 1),
+    # (4, 1, 1, 1),
+    # (20, 1, 2, 2),
+)
 
 
 # Make it a class to re-use the shared dist executor

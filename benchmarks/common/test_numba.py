@@ -5,28 +5,34 @@ import numpy as np
 
 from libertem.common.numba import rmatmul
 
+N = 3*1024
+M = N
+L = M // 8
+FFS = L // 8
+
 
 @pytest.mark.benchmark(
     group="rmatmul",
 )
 def test_rmatmul_csr(benchmark):
-    data = np.zeros((2*16384, 16384), dtype=np.float32)
+    data = np.zeros((2*N, N), dtype=np.float32)
     masks = scipy.sparse.csr_matrix(
-        ([1.]*1000, (range(0, 8000, 8), [0, 1, 2, 3, 4, 5, 6, 7]*125)),
-        shape=(16384, 8),
+        ([1.]*L, (range(0, M, 8), [0, 1, 2, 3, 4, 5, 6, 7]*FFS)),
+        shape=(N, 8),
         dtype=np.float32
     )
     benchmark(rmatmul, data, masks)
 
 
+# @pytest.mark.slow
 @pytest.mark.benchmark(
     group="rmatmul",
 )
 def test_scipysparse_csr_right(benchmark):
-    data = np.zeros((2*16384, 16384), dtype=np.float32)
+    data = np.zeros((2*N, N), dtype=np.float32)
     masks = scipy.sparse.csr_matrix(
-        ([1.]*1000, (range(0, 8000, 8), [0, 1, 2, 3, 4, 5, 6, 7]*125)),
-        shape=(16384, 8),
+        ([1.]*L, (range(0, M, 8), [0, 1, 2, 3, 4, 5, 6, 7]*FFS)),
+        shape=(N, 8),
         dtype=np.float32
     )
 
@@ -40,10 +46,10 @@ def test_scipysparse_csr_right(benchmark):
     group="rmatmul",
 )
 def test_scipysparse_csr_left(benchmark):
-    data = np.zeros((16384, 2*16384), dtype=np.float32)
+    data = np.zeros((N, 2*N), dtype=np.float32)
     masks = scipy.sparse.csr_matrix(
-        ([1.]*1000, ([0, 1, 2, 3, 4, 5, 6, 7]*125, range(0, 8000, 8))),
-        shape=(8, 16384),
+        ([1.]*L, ([0, 1, 2, 3, 4, 5, 6, 7]*FFS, range(0, M, 8))),
+        shape=(8, N),
         dtype=np.float32
     )
 
@@ -57,23 +63,24 @@ def test_scipysparse_csr_left(benchmark):
     group="rmatmul",
 )
 def test_rmatmul_csc(benchmark):
-    data = np.zeros((2*16384, 16384), dtype=np.float32)
+    data = np.zeros((2*N, N), dtype=np.float32)
     masks = scipy.sparse.csc_matrix(
-        ([1.]*1000, (range(0, 8000, 8), [0, 1, 2, 3, 4, 5, 6, 7]*125)),
-        shape=(16384, 8),
+        ([1.]*L, (range(0, M, 8), [0, 1, 2, 3, 4, 5, 6, 7]*FFS)),
+        shape=(N, 8),
         dtype=np.float32
     )
     benchmark(rmatmul, data, masks)
 
 
+# @pytest.mark.slow
 @pytest.mark.benchmark(
     group="rmatmul",
 )
 def test_scipysparse_csc_right(benchmark):
-    data = np.zeros((2*16384, 16384), dtype=np.float32)
+    data = np.zeros((2*N, N), dtype=np.float32)
     masks = scipy.sparse.csc_matrix(
-        ([1.]*1000, (range(0, 8000, 8), [0, 1, 2, 3, 4, 5, 6, 7]*125)),
-        shape=(16384, 8),
+        ([1.]*L, (range(0, M, 8), [0, 1, 2, 3, 4, 5, 6, 7]*FFS)),
+        shape=(N, 8),
         dtype=np.float32
     )
 
@@ -87,10 +94,10 @@ def test_scipysparse_csc_right(benchmark):
     group="rmatmul",
 )
 def test_scipysparse_csc_left(benchmark):
-    data = np.zeros((16384, 2*16384), dtype=np.float32)
+    data = np.zeros((N, 2*N), dtype=np.float32)
     masks = scipy.sparse.csc_matrix(
-        ([1.]*1000, ([0, 1, 2, 3, 4, 5, 6, 7]*125, range(0, 8000, 8))),
-        shape=(8, 16384),
+        ([1.]*L, ([0, 1, 2, 3, 4, 5, 6, 7]*FFS, range(0, M, 8))),
+        shape=(8, N),
         dtype=np.float32
     )
 
@@ -104,10 +111,10 @@ def test_scipysparse_csc_left(benchmark):
     group="rmatmul",
 )
 def test_sparse_coo_right(benchmark):
-    data = np.zeros((2*16384, 16384), dtype=np.float32)
+    data = np.zeros((2*N, N), dtype=np.float32)
     masks = sparse.COO(scipy.sparse.csr_matrix(
-        ([1.]*1000, (range(0, 8000, 8), [0, 1, 2, 3, 4, 5, 6, 7]*125)),
-        shape=(16384, 8),
+        ([1.]*L, (range(0, M, 8), [0, 1, 2, 3, 4, 5, 6, 7]*FFS)),
+        shape=(N, 8),
         dtype=np.float32
     ))
 
@@ -121,10 +128,10 @@ def test_sparse_coo_right(benchmark):
     group="rmatmul",
 )
 def test_sparse_coo_left(benchmark):
-    data = np.zeros((16384, 2*16384), dtype=np.float32)
+    data = np.zeros((N, 2*N), dtype=np.float32)
     masks = sparse.COO(scipy.sparse.csr_matrix(
-        ([1.]*1000, ([0, 1, 2, 3, 4, 5, 6, 7]*125, range(0, 8000, 8))),
-        shape=(8, 16384),
+        ([1.]*L, ([0, 1, 2, 3, 4, 5, 6, 7]*FFS, range(0, M, 8))),
+        shape=(8, N),
         dtype=np.float32
     ))
 
